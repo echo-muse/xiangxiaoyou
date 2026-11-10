@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>湘小游 · 长沙主题游路线规划智能体</title>
+<style>
+:root{
+  /* 青提芭乐配色：#FED0D6 粉 · #E4F6A9 黄绿 · #FF82A2 玫红 · #BDDE93 绿 */
+  --bg:#F7F4EA; --panel:#FAF1EC; --panel2:#F6E7E3; --panel3:#FFF9F4;
+  --line:#F0D5D0; --line2:#E4BDB6;
+  --txt:#5C4A50; --sub:#A89293;
+  --accent:#FF82A2; --accent-dk:#E8607F;
+  --ok:#8FBF6B; --warn:#E3A857; --bad:#E8607F; --info:#9BC47A;
+  --rose:#FF82A2; --sage:#BDDE93; --gold:#C0D46B; --mist:#9BC47A; --lav:#F2B8C6; --clay:#E8899B;
+  --pinkL:#FED0D6; --lime:#E4F6A9; --green:#BDDE93;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:linear-gradient(135deg,#F7F4EA 0%,#FBF0EE 55%,#F5F0DE 100%);color:var(--txt);font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;line-height:1.6;overflow:hidden}
+
+/* ===== 顶栏 ===== */
+.topbar{height:52px;background:linear-gradient(90deg,#FDF7F5 0%,#FBEDEF 45%,#F3F6E3 100%);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 20px;box-shadow:0 1px 0 rgba(255,130,162,.12)}
+.topbar .logo{font-weight:700;font-size:15px;letter-spacing:.5px}
+.topbar .logo .hl{color:var(--accent-dk)}
+.topbar .desc{font-size:11.5px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.topbar .tag{font-size:10.5px;color:#6F9147;background:linear-gradient(120deg,#F0F7DE,#EAF2D3);border:1px solid #C9DA9C;border-radius:12px;padding:2px 10px;white-space:nowrap}
+.topbar .minibtn{background:var(--panel3)}
+
+/* ===== 四栏骨架 ===== */
+.app{display:grid;grid-template-columns:268px 218px 1fr 424px;height:calc(100vh - 52px)}
+.panel{display:flex;flex-direction:column;overflow:hidden;background:var(--panel);border-right:1px solid var(--line);min-width:0}
+.panel:last-child{border-right:none}
+.phead{padding:11px 16px;font-weight:600;font-size:13.5px;color:var(--txt);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;background:var(--panel3);flex-shrink:0}
+.phead .hint{font-size:10.5px;color:var(--sub);font-weight:400}
+.clearbtn{margin-left:auto;background:none;border:1px solid var(--line);color:var(--sub);font-size:10.5px;font-family:inherit;border-radius:12px;padding:2px 9px;cursor:pointer;transition:.15s}
+.clearbtn:hover{border-color:var(--bad);color:var(--bad);background:#FDF0F3}
+.pbody{overflow-y:auto;padding:14px;flex:1}
+.pbody::-webkit-scrollbar,.msgs::-webkit-scrollbar{width:5px}
+.pbody::-webkit-scrollbar-thumb,.msgs::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+.sect{font-size:11px;color:var(--sub);letter-spacing:1px;margin:14px 0 8px;display:flex;align-items:center;gap:7px}
+.sect::before{content:'';width:4px;height:12px;border-radius:3px;background:linear-gradient(180deg,var(--clay),var(--rose))}
+#p_plan .sect::before{background:linear-gradient(180deg,var(--info),var(--lav))}
+#p_cmd .sect:nth-of-type(3)::before{background:linear-gradient(180deg,var(--sage),var(--gold))}
+.sect:first-child{margin-top:0}
+
+/* ===== 栏1 快捷指令 ===== */
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{font-size:12px;background:var(--panel3);border:1px solid var(--line);color:var(--sub);border-radius:18px;padding:6px 12px;cursor:pointer;transition:.15s;text-align:left}
+.chip:hover{border-color:var(--accent);color:var(--txt);background:#FDF0F2}
+.chips .chip:nth-child(6n+1){border-color:#F2A9BC;color:#D95577}
+.chips .chip:nth-child(6n+2){border-color:#C9DA9C;color:#7C9443}
+.chips .chip:nth-child(6n+3){border-color:#F4C3CC;color:#C97A8C}
+.chips .chip:nth-child(6n+4){border-color:#DCE9AF;color:#8FA050}
+.chips .chip:nth-child(6n+5){border-color:#A9CF83;color:#64893C}
+.chips .chip:nth-child(6n+6){border-color:#F6C0A6;color:#C77E52}
+.chips .chip:hover{background:linear-gradient(120deg,#FDF1F3,#FAF3DC);box-shadow:0 2px 8px rgba(255,130,162,.18)}
+.tchips{display:flex;gap:6px;flex-wrap:wrap}
+.tchip{font-size:11.5px;border:1px solid var(--line);background:var(--panel3);border-radius:15px;padding:5px 11px;cursor:pointer;transition:.15s;user-select:none;font-weight:500}
+.tchip:hover{transform:translateY(-1px);box-shadow:0 2px 7px rgba(232,96,127,.15)}
+.tchip.sel{color:#fff;font-weight:600}
+.lnk{color:var(--accent-dk);cursor:pointer;text-decoration:underline;font-size:12px}
+/* ===== 景点详情弹窗 ===== */
+.poiModal{position:fixed;inset:0;background:rgba(92,74,80,.4);display:none;align-items:center;justify-content:center;z-index:60;padding:14px}
+.poiModal.show{display:flex}
+.poiCard{width:min(540px,92vw);max-height:82vh;overflow-y:auto;background:var(--panel3);border:1px solid var(--line);border-radius:16px;padding:20px 24px;box-shadow:0 18px 48px rgba(0,0,0,.2);position:relative}
+.poiCard::-webkit-scrollbar{width:5px}.poiCard::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+.poiCard h3{font-size:17px;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.poiCard .x{position:absolute;top:14px;right:16px;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--sub);cursor:pointer;font-size:14px;line-height:1}
+.poiCard .x:hover{color:var(--txt);border-color:var(--accent)}
+.poiRow{display:flex;gap:8px;font-size:12.5px;padding:7px 0;border-bottom:1px dashed var(--line)}
+.poiRow .k{width:76px;color:var(--sub);flex-shrink:0}
+.poiRow .v{flex:1;color:var(--txt)}
+.poiNear{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.poiNear .nchip{font-size:11.5px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px 11px;cursor:pointer;color:var(--txt)}
+.poiNear .nchip:hover{border-color:var(--accent)}
+.fg{margin-bottom:10px}
+.fg label{font-size:11.5px;color:var(--sub);display:block;margin-bottom:4px}
+select,input[type=date],input[type=number]{width:100%;background:var(--panel3);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:7px 9px;font-size:12.5px;font-family:inherit}
+select:focus,input:focus{outline:1px solid var(--accent)}
+.formgrid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.constr{display:flex;gap:7px;flex-wrap:wrap}
+.constr label{font-size:12px;display:flex;align-items:center;gap:5px;background:var(--panel3);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--sub);transition:.15s;user-select:none}
+.constr label:has(input:checked){border-color:var(--accent);color:var(--txt);background:#EDE7DC}
+.constr input{accent-color:var(--accent)}
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(120deg,#FF82A2,#FFA1B7);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;width:100%;box-shadow:0 3px 10px rgba(255,130,162,.35)}
+.btn:hover{background:linear-gradient(120deg,#E8607F,#FF82A2);box-shadow:0 4px 14px rgba(232,96,127,.42)}
+.btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+.rbtn{background:var(--panel3);border:1px solid var(--line);border-left:3px solid var(--mist);color:var(--txt);border-radius:9px;padding:8px 10px;font-size:12px;cursor:pointer;font-family:inherit;transition:.15s;text-align:left;width:100%}
+.rbtn:nth-child(2){border-left-color:var(--warn)}
+.rbtn:nth-child(3){border-left-color:var(--rose)}
+.rbtn:nth-child(4){border-left-color:var(--lav)}
+.rbtn:hover:not(:disabled){border-color:var(--accent);background:#FDF3F0;transform:translateY(-1px);box-shadow:0 2px 8px rgba(232,96,127,.12)}
+.rbtn:disabled{opacity:.45;cursor:not-allowed}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.minibtn{background:none;border:1px solid var(--line);color:var(--sub);border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit}
+.minibtn:hover{border-color:var(--accent);color:var(--txt)}
+
+/* ===== 栏2 对话历史 ===== */
+.hist{background:var(--panel3);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:.15s;border-left:3px solid var(--lav)}
+.hist:hover{border-color:var(--accent);transform:translateX(2px)}
+.hist.cur{border-color:var(--accent);border-left:3px solid var(--accent);background:linear-gradient(120deg,#FDF1F3,#F7FAE8);box-shadow:0 0 0 1px var(--accent) inset}
+.hist .ht{font-size:12.5px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist .hm{font-size:10.5px;color:var(--sub);margin-top:2px;display:flex;gap:8px}
+.hist .hm .st{color:var(--ok)} .hist .hm .st.warn{color:var(--warn)}
+
+/* ===== 栏3 对话主窗口 ===== */
+.chatwrap{display:flex;flex-direction:column;flex:1;overflow:hidden;background:var(--bg)}
+.msgs{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12px}
+.msg{display:flex;flex-direction:column;max-width:86%}
+.msg.user{align-self:flex-end;align-items:flex-end}
+.msg.agent{align-self:flex-start;align-items:flex-start}
+.bubble{border-radius:14px;padding:10px 14px;font-size:13.5px;white-space:pre-wrap;word-break:break-word}
+.msg.user .bubble{background:linear-gradient(120deg,#FF82A2,#FFA1B7);color:#FFF9FA;border-bottom-right-radius:4px;box-shadow:0 2px 9px rgba(255,130,162,.32)}
+.msg.agent .bubble{background:#FFFDF8;border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg.agent.sys{opacity:.92}
+.msg.agent.sys .bubble{background:var(--panel2);border:none;font-size:12.5px;color:#5D584F;padding:8px 12px}
+.msg.agent .who{font-size:10.5px;color:var(--sub);margin-bottom:3px;padding-left:4px}
+.msg.agent.warn .bubble{border-left:3px solid var(--warn)}
+.msg.agent.ok .bubble{border-left:3px solid var(--ok)}
+.bubble b{color:var(--accent-dk)}
+.msg.user .bubble b{color:#fff}
+.chatinput{border-top:1px solid var(--line);background:var(--panel);padding:12px 16px;flex-shrink:0}
+.chatinput .row{display:flex;gap:9px;align-items:flex-end}
+.chatinput textarea{flex:1;background:var(--panel3);border:1px solid var(--line);border-radius:12px;color:var(--txt);padding:10px 13px;font-size:13.5px;resize:none;font-family:inherit;min-height:44px;max-height:120px;line-height:1.5}
+.sendbtn{background:linear-gradient(120deg,#FF82A2,#FFA1B7);color:#fff;border:none;border-radius:12px;width:52px;height:44px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;box-shadow:0 2px 8px rgba(255,130,162,.32)}
+.sendbtn:hover{background:var(--accent-dk)}
+.sendbtn:disabled{opacity:.5;cursor:not-allowed}
+.chatinput .tip{font-size:10.5px;color:var(--sub);margin-top:6px}
+
+/* ===== 栏4 行程面板 ===== */
+.summary{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.summary .sc{background:var(--panel3);border:1px solid var(--line);border-radius:9px;padding:5px 10px;font-size:11px;color:var(--sub)}
+.summary .sc b{color:var(--txt)}
+.summary .sc:nth-child(1){border-left:3px solid var(--rose);background:#FDF0F3}
+.summary .sc:nth-child(2){border-left:3px solid var(--clay);background:#FBF1F0}
+.summary .sc:nth-child(3){border-left:3px solid var(--gold);background:#F7F8E4}
+.summary .sc:nth-child(4){border-left:3px solid var(--sage);background:#F0F7E5}
+.daycard{background:var(--panel3);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 2px 10px rgba(232,96,127,.06)}
+.dayhead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;padding:7px 11px;border-radius:9px}
+.dayhead .dl{font-size:14px;font-weight:700}
+.dayhead .dm{font-size:10.5px;color:var(--sub)}
+.themeTag{font-size:10.5px;padding:2px 9px;border-radius:12px;font-weight:600}
+.tl{display:flex;flex-direction:column}
+.ev{display:flex;gap:10px}
+.ev .rail{display:flex;flex-direction:column;align-items:center;width:58px;flex-shrink:0}
+.ev .tm{font-size:10.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.ev .dot{width:9px;height:9px;border-radius:50%;margin:4px 0;flex-shrink:0}
+.ev .ln{width:2px;flex:1;background:var(--line);min-height:8px}
+.ev .body{flex:1;padding-bottom:11px;min-width:0}
+.evcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.evcard.travel{background:transparent;border:1px dashed var(--line);padding:6px 11px;font-size:12px}
+.evcard .nm{font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.evcard .meta{font-size:11px;color:var(--sub);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
+.evcard .note{font-size:11px;color:var(--sub);margin-top:5px;border-left:2px solid var(--accent);padding-left:7px}
+.badge{font-size:9.5px;padding:1px 8px;border-radius:11px;font-weight:600;white-space:nowrap}
+.b-green{background:rgba(138,164,142,.2);color:#6B8A70;border:1px solid rgba(138,164,142,.45)}
+.b-yellow{background:rgba(188,162,108,.2);color:#96793E;border:1px solid rgba(188,162,108,.45)}
+.b-red{background:rgba(181,128,128,.2);color:#965555;border:1px solid rgba(181,128,128,.45)}
+.b-gray{background:rgba(138,131,119,.14);color:var(--sub);border:1px solid var(--line)}
+.b-food{background:rgba(179,146,120,.18);color:#9A7350;border:1px solid rgba(179,146,120,.45)}
+.b-warn{background:rgba(188,162,108,.2);color:#96793E;border:1px solid rgba(188,162,108,.45)}
+.resTable{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;background:#FFFDF8;border-radius:9px;overflow:hidden}
+.resTable th{text-align:left;color:#7C9443;font-weight:600;font-size:11px;padding:7px 8px;border-bottom:1px solid var(--line);background:linear-gradient(120deg,#EFF6DC,#F3F0E0)}
+.resTable td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.kcard{background:#FFFDF8;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:11.5px;color:var(--sub);margin-bottom:8px;border-left:3px solid var(--gold)}
+.kcard b{color:var(--txt);display:block;margin-bottom:3px;font-size:12px}
+.kcard .cat{font-size:9.5px;color:var(--accent-dk);letter-spacing:1px;margin-bottom:4px;display:block}
+.empty{color:var(--sub);font-size:12.5px;text-align:center;padding:36px 16px;line-height:2}
+.hidden{display:none}
+
+/* ===== 移动端标签切换 ===== */
+.tabs{display:none}
+@media(max-width:1180px){
+  .app{grid-template-columns:1fr;grid-template-rows:1fr;height:calc(100vh - 52px - 54px);height:calc(100dvh - 52px - 54px)}
+  .panel{display:none}
+  .panel.mobActive{display:flex}
+  #p_chat.mobActive{display:flex}
+  .tabs{position:fixed;bottom:0;left:0;right:0;z-index:50;display:flex;height:54px;background:var(--panel3);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 12px rgba(232,96,127,.08)}
+  .tabs button{flex:1;background:none;border:none;font-family:inherit;font-size:11.5px;color:var(--sub);cursor:pointer;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center}
+  .tabs button.active{color:var(--accent-dk);font-weight:600}
+  .tabs .ti{font-size:17px}
+  .topbar .desc,.topbar .tag{display:none}
+  .msgs{padding:14px 14px}
+  .summary{gap:5px}
+  .chatinput{padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">湘小游  <span class="hl"></span></span>
+  <span class="desc">预约可行性校验 → 排队规避 → 主题日分区 → 多智能体协同 → 动态重规划 → 避坑伴游｜数据：9 大主题 / 85 点位（预约与排队为规则模拟）</span>
+  <span class="tag">🪪 省博提前7天 · 橘子洲/岳麓山提前3天</span>
+  <button class="minibtn" onclick="newSession(true)">＋ 新对话</button>
+</div>
+
+<div class="app">
+
+  <!-- ===== 栏1 快捷指令面板 ===== -->
+  <div class="panel mobActive" id="p_cmd">
+    <div class="phead">⚡ 快捷指令 <span class="hint">点按即发送</span></div>
+    <div class="pbody">
+      <div class="sect">🎯 主题行程一键生成</div>
+      <div class="chips" id="chips"></div>
+      <div class="sect">🎨 按主题选点（点击选中，可多选）</div>
+      <div class="tchips" id="themeChips"></div>
+      <div class="sect">📅 出行参数</div>
+      <div class="fg"><label>出发日期</label><input type="date" id="startDate"></div>
+      <div class="formgrid2">
+        <div class="fg"><label>行程天数</label><input type="number" id="days" min="1" max="5" value="2"></div>
+        <div class="fg"><label>日期类型</label>
+          <select id="daytype"><option value="work">工作日</option><option value="holiday">周末/节假日</option></select>
+        </div>
+      </div>
+      <div class="fg"><label>出行人群</label>
+        <select id="crowd">
+          <option value="auto">自动识别</option>
+          <option value="family">家庭亲子</option>
+          <option value="elderly">带爸妈/老人</option>
+          <option value="couple">情侣</option>
+          <option value="friends">朋友结伴</option>
+          <option value="beast">特种兵</option>
+        </select>
+      </div>
+      <div class="fg"><label>住宿区域</label>
+        <select id="hotel">
+          <option value="0">五一广场·市中心（默认）</option>
+          <option value="1">河西大学城·岳麓山边</option>
+          <option value="2">梅溪湖</option>
+          <option value="3">省博·烈士公园周边</option>
+          <option value="4">星沙·松雅湖</option>
+        </select>
+      </div>
+      <div style="height:12px"></div>
+      <button class="btn" id="genBtn" onclick="sendFromPanel()">🧭 按以上设置生成行程</button>
+      <div class="sect">🌦 动态重规划（生成行程后可用）</div>
+      <div class="rgrid">
+        <button class="rbtn" id="r_rain" disabled onclick="doReplan('rain')">🌧 突降大雨</button>
+        <button class="rbtn" id="r_queue" disabled onclick="doReplan('queue')">⏱ 排队超预期</button>
+        <button class="rbtn" id="r_closed" disabled onclick="doReplan('closed')">🚧 橘子洲闭园</button>
+        <button class="rbtn" id="r_late" disabled onclick="doReplan('late')">🕐 延误2小时</button>
+      </div>
+      <div style="font-size:10.5px;color:var(--sub);margin-top:10px;line-height:1.7">重规划只修补后续未完成行程，保留已完成预约与已游览节点。</div>
+    </div>
+  </div>
+
+  <!-- ===== 栏2 对话历史 ===== -->
+  <div class="panel" id="p_hist">
+    <div class="phead">🕘 对话历史 <span class="hint" id="histCount"></span><button class="clearbtn" id="histClear" onclick="clearHist()" title="清空全部历史记录">🗑 清空</button></div>
+    <div class="pbody" id="histList"></div>
+  </div>
+
+  <!-- ===== 栏3 对话主窗口 ===== -->
+  <div class="panel" id="p_chat" style="background:var(--bg)">
+    <div class="phead">💬 对话窗口 <span class="hint" id="chatTitle"></span></div>
+    <div class="msgs" id="msgs"></div>
+    <div class="chatinput">
+      <div class="row">
+        <textarea id="nl" placeholder="描述你的长沙之行，例如：带爸妈感受长沙的红色文化，两天，不吃辣，必须去省博"></textarea>
+        <button class="sendbtn" id="sendBtn" onclick="sendFromChat()">发送</button>
+      </div>
+      <div class="tip">Enter 发送 · Shift+Enter 换行 · 生成后可继续追问（如"改成3天""湖南博物院怎么预约""茶颜要排多久"）</div>
+    </div>
+  </div>
+
+  <!-- ===== 栏4 行程规划展示面板 ===== -->
+  <div class="panel" id="p_plan">
+    <div class="phead">🗺 行程规划 <span class="hint" id="planTag"></span></div>
+    <div class="pbody">
+      <div id="planBody"><div class="empty">还没有行程<br>点击左侧「主题行程一键生成」或直接对话，<br>生成的行程会展示在这里</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 移动端标签栏 -->
+<div class="tabs">
+  <button class="active" data-p="p_cmd" onclick="switchTab(this)"><span class="ti">⚡</span>快捷指令</button>
+  <button data-p="p_hist" onclick="switchTab(this)"><span class="ti">🕘</span>历史</button>
+  <button data-p="p_chat" onclick="switchTab(this)"><span class="ti">💬</span>对话</button>
+  <button data-p="p_plan" onclick="switchTab(this)"><span class="ti">🗺</span>行程</button>
+</div>
+
+<!-- 景点详情弹窗 -->
+<div class="poiModal" id="poiModal" onclick="if(event.target===this)closePoi()">
+  <div class="poiCard" id="poiCard"></div>
+</div>
+
+<script>
+/* ===================== 主题元数据（莫兰迪配色） ===================== */
+const THEMES={
+ heritage:{name:'湖湘文脉寻踪',color:'#E8899B'},
+ museum:{name:'万物藏珍阅馆',color:'#9BB874'},
+ red:{name:'星火湘水寻迹',color:'#E8607F'},
+ temple:{name:'古刹禅意寻幽',color:'#F2B8C6'},
+ nature:{name:'山水洲城揽胜',color:'#8FBF6B'},
+ lake:{name:'湖光闲野漫步',color:'#A9CF83'},
+ street:{name:'烟火老街漫游',color:'#FF82A2'},
+ kids:{name:'童趣奇境畅玩',color:'#C0D46B'},
+ mall:{name:'潮流商圈嗨购',color:'#E3A857'}
+};
+
+/* ===================== 75 个点位 [主题,名称,区县,纬度,经度,预约门票,开放时间,建议游玩,贴士,近地铁] ===================== */
+const RAW=[["heritage","天心阁","天心区",28.177,112.9765,"需购票（约32元）","08:00-17:30（公园 06:30-22:00）","1-1.5小时","公园免费，登阁另购票",1,"天心区天心路（天心公园内）","地铁1号线“南门口”站步行约10分钟；公交至“天心阁”站；天心公园周边有小型停车场","明万历年间始建，清代多次重修，为长沙古城墙仅存一段，1938年文夕大火后重建","“潇湘古阁，秦汉名城”，明清文人题咏之地，太平军攻长沙曾在此激战","古城墙、古炮台、登阁俯瞰老城"],["heritage","杜甫江阁","天心区",28.1935,112.969,"免费开放（登阁另收费）","09:00-22:00","1小时","晚上灯光最美，江边风大",1,"天心区湘江中路二段（西湖路口，湘江东岸）","地铁2号线“湘江中路”站步行约12分钟；公交至“西湖桥”“杜甫江阁”站；江边有停车位但紧张","2005年建成，纪念杜甫晚年流寓长沙（约768-770年），其在此写下《江南逢李龟年》","唐代诗圣与湖湘的因缘，长沙“诗文化”地标","仿唐楼阁、江景平台、夜景灯光"],["heritage","贾谊故居","天心区",28.1965,112.973,"免费，登记入内","09:00-17:00，周一闭馆","0.5小时","周一闭馆，位于太平街内",1,"天心区太平街太傅里","地铁2号线“湘江中路”站步行约8分钟；公交至“太平街口”站；位于步行街内需步行进入","西汉贾谊任长沙王太傅时的居所，历代重修，1938年焚毁后重建","贾谊在此作《吊屈原赋》《鵩鸟赋》，湖湘文化源头之一","太傅井、碑廊、长怀井"],["heritage","白沙古井","天心区",28.172,112.979,"免费，开放式","全天开放","0.5小时","可自带瓶子打水，勿投杂物",1,"天心区白沙路（白沙井岭）","地铁1号线“南门口”站步行约15分钟；公交至“白沙井”站；路边停车不便","明代已有记载，明清列为长沙名泉，今存四眼古井","长沙“水文化”象征，市民取水习俗延续至今","四眼井、市民排队打水、井亭"],["heritage","岳麓书院","岳麓区",28.1815,112.941,"需购票（约40元）","07:30-18:00（夏季至 18:00，冬季提前闭园）","1.5-2小时","可从书院直接上岳麓山",1,"岳麓区麓山路（湖南大学内，岳麓山东侧）","地铁4号线“湖南大学”站2号口步行约8分钟；公交至“湖南大学”站；校内不对外停车","北宋开宝九年（976年）潭州太守朱洞创建，中国古代四大书院之一，1926年发展为湖南大学","朱熹与张栻“朱张会讲”，千年学府，湖湘文化核心","讲堂、御书楼、三绝碑、赫曦台"],["heritage","爱晚亭","岳麓区",28.1865,112.935,"含在岳麓山，免费","随岳麓山景区 06:00-23:00","0.5小时","11月中下旬枫叶最佳",0,"岳麓区岳麓山清风峡","岳麓山东门入山步行约30分钟，或乘景区观光车/索道；无直达公共交通","清乾隆五十七年（1792年）岳麓书院山长罗典创建，原名红叶亭，后取杜牧“停车坐爱枫林晚”改名","中国四大名亭之一，毛泽东青年时代常在此聚会","红枫、毛泽东题“爱晚亭”匾、溪涧"],["heritage","靖港古镇","望城区",28.352,112.748,"免费入园，部分小馆收费","古镇全天开放，场馆约 08:30-17:30","2-3小时","周末有民俗表演",0,"望城区靖港镇（湘江西岸）","自驾走雷锋大道至靖港；望城公交可至靖港镇；景区外有停车场","明清时期湘江四大米市之一，有“小汉口”之称，2008年起修复开放","湘江水运商埠文化与湖湘民俗","麻石街、宁乡会馆、老字号布鞋与腐乳"],["heritage","铜官窑古镇","望城区",28.457,112.829,"需购票（约100元起）","09:00-22:00（夜场演出约 19:30 起）","3-4小时","夜场打铁花值得看，注意演出时间",0,"望城区铜官街道（湘江东岸）","自驾走湘江北路至铜官；有景区直通车与公交；景区大型停车场","唐代长沙窑（铜官窑）故地，首创釉下彩，产品远销海外，2018年建成古镇景区","“黑石号”沉船瓷器来源地，陶瓷外销史坐标","古窑遗址、陶艺体验、打铁花夜演"],["heritage","马王堆汉墓遗址","芙蓉区",28.201,113.026,"需预约购票（遗址坑）","09:00-17:00，周一闭馆（需预约）","0.5-1小时","看文物请去湖南博物院，此处为出土地",0,"芙蓉区马王堆片区（湖南省人民医院马王堆院区内）","公交至“马王堆医院”站；自驾可停医院周边停车场；院区内步行前往","1972-1974年发掘，西汉长沙国丞相利苍家族墓，出土辛追夫人、素纱襌衣、帛书","马王堆文化改写汉代科技、医学、艺术认知","三号墓坑原址保护展示，文物主体藏于湖南博物院"],["museum","长沙简牍博物馆","天心区",28.174,112.981,"免费，需预约，周一闭馆","09:00-17:00，周一闭馆","1-1.5小时","人少清净，可与天心阁连看",1,"天心区白沙路（白沙古井旁）","地铁1号线“南门口”站步行约15分钟；公交至“白沙路”站；馆内有停车位","2007年开馆，全国首座简牍专题博物馆，藏走马楼三国吴简","吴简记录三国时期长沙郡县行政、赋税、司法","三国吴简、简牍制作体验、印章"],["museum","湖南省科学技术馆","天心区",28.136,113.008,"免费，需预约，周一闭馆","09:00-16:00，周一闭馆","2-3小时","影院和部分体验项目单独收费",0,"天心区杉木冲路（省府片区）","公交至“科技馆”站；自驾走湘府路，馆前有停车场","2011年新馆对外开放，省级综合性科技馆","面向公众的科学传播与青少年科教基地","球幕影院、儿童科学乐园、互动展项"],["museum","谢子龙影像艺术馆","岳麓区",28.123,112.944,"免费，需预约（特展收费）","10:00-18:00，周一闭馆","1-2小时","周一闭馆，展期以官方为准",1,"岳麓区潇湘南路（洋湖湿地公园内）","地铁3号线“洋湖湿地”站步行约15分钟；公交至“洋湖湿地公园”站；馆前有停车场","2017年开馆，由摄影家谢子龙创办，清水混凝土建筑","影像艺术收藏、研究与公共教育","摄影大展、极简建筑（网红打卡）"],["museum","李自健美术馆","岳麓区",28.121,112.95,"免费，需预约","09:30-17:30，周一闭馆","1-2小时","与谢子龙馆相邻，可一次看两馆",1,"岳麓区潇湘南路（洋湖，近谢子龙影像艺术馆）","地铁3号线“洋湖湿地”站步行约15分钟；与谢子龙馆相邻，共用周边停车","2016年开馆，画家李自健捐建，为全球最大的个人美术馆之一","写实主义油画与海外华人艺术","《乡土情》《南京大屠杀》等系列原作"],["museum","湖南美术馆","岳麓区",28.145,112.943,"免费，需预约","09:00-17:00，周一闭馆","1-2小时","周一闭馆",0,"岳麓区潇湘南路（靳江路口）","公交至“湖南美术馆”站；自驾走潇湘南路，馆前有停车场","2019年开馆，湖南省级美术馆","湖湘美术收藏、展览与公共教育","湖湘主题展、儿童艺术空间"],["museum","湖南博物院","开福区",28.221,112.988,"免费，需提前预约，周一闭馆","09:00-17:00（16:00 停止入馆），周一闭馆","3-4小时","门票极难抢，放票即约；可从马王堆展厅开始",0,"开福区东风路50号","公交至“省博物馆”站；地铁需转公交或打车；院内停车位少，建议公交前往","1956年建馆，2017年改扩建后更名湖南博物院，为国家一级博物馆","马王堆汉墓文物与湖南地方历史的收藏研究中心","素纱襌衣、T形帛画、辛追夫人、商周青铜器"],["museum","长沙市博物馆","开福区",28.249,112.989,"免费，需预约，周一闭馆","09:00-17:00，周一闭馆","1.5-2小时","与规划馆、图书馆同在一个园区",0,"开福区湘江北路（滨江文化园内）","公交至“滨江文化园”站；自驾走湘江北路，园区有地下停车场；地铁1号线“北辰三角洲”站打车约8分钟","1986年建馆，2015年迁入滨江文化园新馆","长沙城市历史的系统展示","“湘江北去”基本陈列、青铜器、长沙古城模型"],["museum","沙坪湘绣博物馆","开福区",28.36,113.038,"免费，体验另收费","09:00-17:00","1-2小时","距市区较远，建议自驾",0,"开福区沙坪街道（湘绣小镇）","自驾走长青路至沙坪湘绣小镇；公交班次少，建议自驾","依托沙坪湘绣产业带设立，展示湘绣历史与技艺","湘绣发源地之一，非遗生产性保护","绣品陈列、绣娘工坊、可体验刺绣"],["museum","滨江文化园","开福区",28.253,112.993,"免费开放，演出需购票","园区全天开放，场馆 09:00-17:00","1-2小时","看展看演出需提前查排期",0,"开福区湘江北路（新河三角洲）","公交至“滨江文化园”站；园区有地下停车场；地铁1号线“北辰三角洲”站打车约8分钟","2015年建成，集中布局博物馆、规划展示馆、图书馆、音乐厅（“三馆一厅”）","长沙滨江文化建筑群与公共文化客厅","临江建筑群、音乐厅演出、江景平台"],["museum","隆平水稻博物馆","芙蓉区",28.196,113.043,"免费，需预约，周一闭馆","09:00-16:30，周一闭馆","1.5-2小时","适合带孩子，馆内有互动展项",0,"芙蓉区人民东路（浏阳河东岸）","公交至“人民东路”沿线站点后步行；打车较方便；馆前有停车场","2019年开馆，全国首座水稻专题博物馆，与袁隆平院士团队渊源深厚","稻作文明与杂交水稻科技的国家级科普窗口","稻穗造型建筑、稻作历史、杂交水稻展"],["museum","湖南湘绣博物馆","芙蓉区",28.201,113,"免费，团队需预约","09:00-16:30（团队需预约）","1小时","可现场买绣品，价格偏高",0,"芙蓉区车站北路（湖南省湘绣研究所内）","公交至“湘绣研究所”站；自驾停院内停车场，车位有限","依托1950年代成立的湖南省湘绣研究所设立，系统收藏湘绣精品","湘绣为中国四大名绣之一，2006年列入国家级非遗","双面绣、鬅毛针，可看绣娘现场演示"],["museum","雨花非遗馆","雨花区",28.169,113.024,"免费，体验项目收费","09:00-17:00，周一闭馆","1-2小时","适合带孩子做手工",0,"雨花区万家丽中路（近长沙大道）","公交至“雨花非遗馆”站；自驾走万家丽路，馆前有停车场","2017年开馆，集中展示湖南各级非遗项目","非遗活态传承与研学基地","湘绣、剪纸、陶艺体验，非遗表演"],["museum","湖南省地质博物馆","雨花区",28.133,113.009,"免费，需预约，周一闭馆","09:00-16:30，周一闭馆","1.5-2小时","与科技馆距离不远，可同一天安排",0,"雨花区杉木冲路（省府片区）","公交至“地质博物馆”站；自驾走湘府路，馆前有停车场","1958年建馆，新馆2012年对外开放","地球科学与矿产资源科普","恐龙化石、矿物晶体、地震体验"],["red","湖南省立第一师范学校旧址","天心区",28.173,112.974,"免费，需预约，周一闭馆","09:00-17:00，周一闭馆","1-1.5小时","需带身份证登记",0,"天心区书院路（妙高峰）","公交至“第一师范”站；自驾停书院路周边停车场；地铁需转公交","1903年创办，1913-1918年毛泽东在此求学并任教；1938年毁于战火，1960年代按原貌复建","承城南书院文脉（张栻、朱熹讲学），中国近代师范教育重镇","第八班教室、君子亭、毛泽东纪念展"],["red","新民学会旧址","岳麓区",28.1945,112.945,"免费，需预约","09:00-17:00，周一闭馆","0.5-1小时","周一闭馆",1,"岳麓区新民路（周家台子）","地铁2号线“溁湾镇”站步行约15分钟；公交至“新民路”站","1918年4月毛泽东、蔡和森等在此成立新民学会，为中国共产党的早期组织源头之一","五四时期湖南进步青年的革命起点","旧址陈列、菜园、历史照片"],["red","雷锋纪念馆","望城区",28.283,112.832,"免费，需预约，周一闭馆","09:00-17:00，周一闭馆","1.5-2小时","团队可预约讲解",0,"望城区雷锋街道（正兴路）","公交至“雷锋纪念馆”站；自驾有停车场，参观免费","1968年建成开馆，纪念共产主义战士雷锋，经多次改扩建","雷锋精神的国家级纪念与教育基地","雷锋生平陈列、故居、事迹展"],["red","杨开慧纪念馆","长沙县",28.676,113.178,"免费，需预约，周一闭馆","09:00-17:00，周一闭馆","1.5-2小时","距市区约50公里，建议自驾",0,"长沙县开慧镇（板仓）","自驾走开慧镇方向；长沙县公交可至开慧镇；馆前有停车场","故居建于清末，杨开慧在此出生成长；1980年代建纪念馆","毛泽东夫人杨开慧烈士的生平与革命史","板仓故居、陵园、生平陈列"],["red","黄兴故居","长沙县",28.16,113.09,"免费，需预约，周一闭馆","09:00-17:00，周一闭馆","1小时","周边有黄兴纪念园可一并参观",0,"长沙县黄兴镇（凉塘）","自驾走黄兴镇方向；公交至“黄兴故居”站；村口有停车场","清同治年间建成的土砖民居，黄兴出生于此","辛亥革命元勋黄兴的早年生活","土砖老屋、堂屋、生平陈列"],["red","田汉文化园","长沙县",28.323,113.13,"免费，需预约","09:00-17:00，周一闭馆","1.5-2小时","与浔龙河相邻，可顺路",0,"长沙县果园镇（田汉故居）","自驾走果园镇方向；与浔龙河相邻可连游；园前有停车场","田汉故居所在地，2018年建成文化园，纪念《义勇军进行曲》词作者","国歌文化与戏剧艺术","田汉故居、戏剧展馆、国歌广场"],["temple","古麓山寺","岳麓区",28.1845,112.938,"含在岳麓山，免费","08:00-17:30","0.5-1小时","寺内保持安静，勿拍僧人",0,"岳麓区岳麓山山腰（近爱晚亭）","位于岳麓山半山，从东门或南门步行上山约25分钟，或乘景区观光车至半山","西晋泰始四年（268年）创建，为佛教传入湖南最早的遗迹，有“汉魏最初名胜”之称","湖南佛教祖庭之一，历代高僧驻锡","山门、观音阁、古树白鹤泉"],["temple","古开福寺","开福区",28.219,112.984,"需购票（10元，含三炷香）","08:00-16:30","1小时","殿内勿拍照，素面馆可尝",1,"开福区开福寺路","地铁1号线“开福寺”站步行约10分钟；公交至“开福寺”站；寺前有停车位","五代后唐天成二年（927年）楚王马殷创建，为佛教禅宗著名道场","“先有开福寺，后有长沙城”之说，湖湘佛教名刹","红墙黄瓦、山门、大雄宝殿、放生池"],["temple","洗心禅寺","望城区",28.313,112.833,"免费，开放式","08:00-17:00","1小时","保持安静，勿大声喧哗",0,"望城区（雷锋大道一带）","自驾走雷锋大道；公交班次少，建议打车","始建于明代，2000年代由一诚法师主持重建","禅宗道场与禅修中心","殿堂建筑、禅修活动、素斋"],["temple","陶公庙","长沙县",28.193,113.1,"需购票（5元）","08:00-17:00","0.5-1小时","正月庙会人极多",0,"长沙县㮾梨街道（浏阳河东岸）","公交至“㮾梨”站步行约10分钟；自驾停庙前停车场","相传始建于南朝梁天监年间，祭祀陶淡、陶烜叔侄，历代重修","湖南道教民俗与庙会文化","古戏楼、正殿、古樟，庙会热闹"],["nature","岳麓山风景名胜区","岳麓区",28.185,112.938,"免费，需预约","06:00-23:00（索道约 08:30-17:30）","3-5小时","周末人多，建议早上去；索道单独收费",1,"岳麓区登高路（东门）／麓山南路（南门）","地铁4号线“湖南大学”站（东门入山）、2号线“溁湾镇”站（北门入山）；公交至“岳麓山北”“岳麓山”站","南岳衡山七十二峰之尾，故名“岳麓”；自古为文化名山，抗战长沙会战的重要阵地","儒（岳麓书院）、释（麓山寺）、道（云麓宫）共处一山","爱晚亭、观景台俯瞰湘江与橘子洲、索道"],["nature","橘子洲","岳麓区",28.213,112.961,"免费，需预约；小火车收费","全天开放（小火车约 08:00-21:30）","2-3小时","洲长近5公里，建议坐小火车",1,"岳麓区橘子洲（湘江江心洲）","地铁2号线“橘子洲”站出站即景区入口；公交至“橘子洲大桥西”站；节假日桥上禁行，务必地铁","湘江冲积沙洲，宋代已有人居；1925年毛泽东重游作《沁园春·长沙》","“独立寒秋，湘江北去”的实景地，红色文化地标","青年毛泽东艺术雕塑（高32米）、小火车、节假日烟花"],["nature","桃花岭景区","岳麓区",28.193,112.902,"免费，开放式","全天开放","2-3小时","比岳麓山清静，适合亲子徒步",0,"岳麓区西二环（梅溪湖东侧）","公交至“桃花岭公园”站；自驾走西二环，景区门口有停车场","原为桃花岭村山林，2010年代建成开放式景区","城市近郊山林保育与休闲","溪谷步道、水库、平缓登山道"],["nature","象鼻窝森林公园","岳麓区",28.163,112.856,"免费，开放式","全天开放","2-3小时","山路较原始，穿防滑鞋",0,"岳麓区西南郊（坪塘、莲花一带）","无直达公交，建议自驾或打车前往；山路停车位置有限","省级森林公园，以山林、竹林与溪谷为主","城市西南的森林生态屏障","竹林徒步、溪涧、山顶视野"],["nature","黑麋峰国家森林公园","望城区",28.456,112.933,"免费入园，部分项目收费","08:00-17:30","3-4小时","山顶风大，露营需自带装备",0,"望城区桥驿镇","自驾走桥驿镇方向上山；公交班次少，建议自驾","古称洞阳山，道教福地，主峰海拔约590米","道教文化与山林生态","山顶观景、竹林、露营基地"],["nature","月亮岛","望城区",28.292,112.903,"免费入园，部分区域收费","全天开放（场馆约 09:00-21:00）","2-3小时","上岛需走月亮岛大桥",0,"望城区湘江江心（月亮岛）","自驾过月亮岛大桥上岛，岛上有停车场；公交至“月亮岛”站","湘江中的沙洲，2010年代开发为体育休闲岛","江心洲生态与运动休闲","骑行、露营、足球公园、沙滩"],["nature","巴溪洲","望城区",28.145,112.882,"免费，开放式","全天开放","1-2小时","岛上补给少",0,"望城区湘江（坪塘对岸）","自驾上洲，岛上有停车场；节假日车位紧张，建议早到","湘江江心洲，2010年代建设为生态公园","江心洲湿地与休闲骑行","芦苇荡、环岛骑行、日落"],["nature","乌山森林公园","望城区",28.298,112.8,"免费，开放式","全天开放","2-3小时","山路较陡，注意补水",0,"望城区乌山镇","自驾走乌山镇方向；无直达公交","以乌山山体为主体的省级森林公园","山林生态与宗教遗迹","登山步道、山顶寺观、林荫"],["nature","影珠山","长沙县",28.618,113.142,"免费，开放式","全天开放","2-3小时","山上无补给，需自带水",0,"长沙县福临镇","自驾走福临镇方向上山；无直达公交","抗战时期长沙会战影珠山阻击战发生地，存战壕遗迹","抗战纪念与山地生态","抗战遗迹、登山步道、云海"],["nature","天华山","长沙县",28.621,113.052,"免费，开放式","全天开放","2-3小时","道路较窄，自驾注意",0,"长沙县北部（开慧、青山铺一带）","自驾走开慧、青山铺方向；无直达公交","以山林、古寺为主的山地景区","城郊山林与宗教遗迹","登山步道、山顶寺庙、竹林"],["nature","石燕湖生态旅游景区","雨花区",28.093,113.09,"需购票（约80元起）","08:00-17:30","4-5小时","玻璃桥等项目单独收费",0,"雨花区跳马镇（石燕湖大道）","自驾走长株高速至跳马出口；公交至“石燕湖”站；景区有大型停车场","1990年代开发，国家4A级景区","长株潭绿心区域的山水景区","湖景、玻璃桥、丛林穿越、拓展基地"],["nature","跳马涧","雨花区",28.113,113.068,"免费，开放式","全天开放","2-3小时","部分路段较野，注意安全",0,"雨花区跳马镇（石燕湖附近）","自驾走跳马镇方向；无直达公交，建议自驾","属长株潭绿心山林地带，以溪涧山谷为主","绿心生态保育区","溪涧、竹林、徒步野线"],["lake","南郊公园","天心区",28.15,112.97,"免费，开放式","06:00-22:00","1-2小时","早晚锻炼人多",0,"天心区新开铺路","公交至“南郊公园”站；自驾停公园北门停车场","1950年代辟为公园，原为城市苗圃与山林","长沙南部的老牌市民公园","山林步道、观景台、儿童游乐"],["lake","梅溪湖公园","岳麓区",28.202,112.919,"免费，开放式","全天开放","1-2小时","喷泉表演时间以现场公告为准",1,"岳麓区梅溪湖（环湖路）","地铁2号线“梅溪湖西”“麓云路”站步行可达；公交至“梅溪湖”站；环湖有停车场","2009年起随梅溪湖片区开发建成","新城公共空间与文化艺术区","环湖步道、音乐喷泉、梅溪湖国际文化艺术中心（扎哈·哈迪德设计）"],["lake","洋湖湿地公园","岳麓区",28.129,112.95,"免费，开放式","全天开放（科普馆 09:00-17:00）","2-3小时","夏季注意防晒防蚊",1,"岳麓区洋湖片区（坪塘大道）","地铁3号线“洋湖湿地”站步行约10分钟；公交至“洋湖湿地公园”站；园内有停车场","2011年开园，中南地区最大的城市湿地公园之一","湿地保育与生态科普","湿地观鸟、花海、科普馆、亲水步道"],["lake","桃子湖","岳麓区",28.187,112.948,"免费，开放式","全天开放","0.5-1小时","夏末荷花最好看",1,"岳麓区麓山南路（湖南师范大学旁）","地铁4号线“湖南大学”站步行约10分钟；公交至“桃子湖”站；周边停车紧张","原为湘江旧河道洼地，后积水成湖","大学城人文景观的一部分","荷塘、环湖跑道、垂柳"],["lake","望月公园","岳麓区",28.2,112.939,"免费，开放式","06:00-22:00","1小时","春天赏樱，人不多",0,"岳麓区望月湖小区（近咸嘉湖路）","公交至“望月湖”站；自驾停望月湖小区周边","1980年代建园，园内有西汉长沙王室墓相关遗存","市民休闲绿地与汉代王陵遗存地","山樱花、湖面、小山坡"],["lake","湖南烈士公园","开福区",28.213,112.995,"免费，开放式","06:00-22:00","2-3小时","清明前后有纪念活动",1,"开福区东风路（西门）／迎宾路（南门）","公交至“烈士公园”站；地铁2号线“芙蓉广场”站步行约15分钟；南门、西门均有停车场","1956年建成开放，纪念湖南革命先烈，园内建烈士纪念塔","湖南革命史纪念空间与市民休闲地","烈士塔、年嘉湖、樱花林、游乐场"],["lake","月湖公园","开福区",28.228,113.023,"免费，开放式","全天开放","1-2小时","适合夜跑",0,"开福区月湖街道（近万家丽北路）","公交至“月湖公园”站；自驾停公园周边停车场","2000年代随月湖片区开发建成，以月湖水面为核心","城北滨水公共空间","湖景、雕塑、环湖跑道"],["lake","长沙园林生态园","开福区",28.305,113.025,"免费入园，部分项目收费","08:00-18:00","2-3小时","春秋两季景色最好",0,"开福区青竹湖（捞刀河北岸）","公交至“园林生态园”站；自驾走青竹湖路，园前有停车场","2000年代建成的园林园艺主题园区","园林艺术与生态科普","园林景观、花木展区、亲子游乐"],["lake","千龙湖生态旅游区","望城区",28.423,112.823,"免费入园，项目收费","08:30-18:00","2-3小时","适合自驾亲子游",0,"望城区格塘镇","自驾走格塘镇方向；公交班次少，建议自驾","依托千龙湖水面开发的度假区","城郊水乡度假与生态农业","湖景、水上项目、垂钓、农家菜"],["lake","大泽湖近自然湿地公园","望城区",28.333,112.92,"免费，开放式","全天开放","1-2小时","无商业配套，需自带饮水",0,"望城区大泽湖（潇湘北路一带）","自驾走潇湘北路；公交较少，建议自驾，周边停车免费","2010年代随滨水新城建设形成的近自然湿地","城市湿地修复与低干扰游憩","大草坪、浅滩、露营、遛娃"],["lake","浏阳河婚庆文化园","芙蓉区",28.21,113.035,"免费，开放式","全天开放（拍摄场地 09:00-18:00）","1小时","拍婚纱照的场地部分需另行付费",0,"芙蓉区浏阳河西岸（营盘东路东延段，近马王堆路）","公交至“浏阳河婚庆公园”站；打车或自驾更省时，园区有停车场","2010年代依托浏阳河风光带建成，定位婚庆主题公园","以婚庆、摄影为主题的城市滨河公园","欧式教堂、草坪、风车，婚纱摄影热门地"],["lake","松雅湖国家湿地公园","长沙县",28.246,113.082,"免费，开放式","全天开放","2-3小时","环湖一圈约10公里，可租单车",1,"长沙县星沙（松雅湖）","地铁3号线“松雅湖”站步行可达；公交至“松雅湖”站；环湖有停车场","原为捞刀河故道洼地，2010年代蓄水成湖并建成湿地公园","城市湿地与星沙新城的生态客厅","环湖绿道、人工沙滩、骑行、观鸟"],["lake","金井茶园","长沙县",28.652,113.152,"免费入园，体验收费","08:00-18:00","1-2小时","采茶季3-10月",0,"长沙县金井镇","自驾走金井镇方向；公交班次少，建议自驾","金井镇自明代起产茶，为湖南名茶产区","茶文化与茶产业","茶园景观、采茶体验、茶厂参观"],["lake","湖南省森林植物园","雨花区",28.131,113.019,"免费，需预约（花展期间购票）","08:00-18:00（花展期间以公告为准）","3-4小时","3月樱花季人最多",0,"雨花区韶山南路（天际岭）","公交至“植物园”站；自驾走韶山南路，园前有停车场","1985年建园，为省级植物园与科研科普基地","植物迁地保护与花卉展览","樱花湖、杜鹃园、郁金香花展"],["lake","圭塘河生态公园","雨花区",28.16,113.016,"免费，开放式","全天开放","1-2小时","沿河可骑行",0,"雨花区圭塘河沿岸（劳动东路以南）","公交至“圭塘河”沿线站点；自驾可停沿线商业体停车场","原为污染严重的城市河道，2010年代系统治理后建成带状公园","城市水体治理与滨水空间复兴的样本","滨水步道、草坡、儿童活动区"],["lake","同升湖","雨花区",28.122,113.053,"免费入园，项目收费","全天开放","1-2小时","部分区域为小区内部",0,"雨花区同升街道（同升湖山庄）","自驾走同升湖路；公交班次少，建议打车","1990年代随同升湖片区开发形成的人工湖","城郊度假与居住区配套湖景","湖面、环湖路、度假酒店"],["lake","沙湾公园","雨花区",28.178,113.02,"免费，开放式","06:00-22:00","1小时","傍晚运动人多",0,"雨花区沙湾路","公交至“沙湾公园”站；自驾停公园停车场","2010年代建成的体育主题公园","全民健身与体育休闲","球场、跑步道、健身器材"],["street","太平老街","天心区",28.197,112.973,"免费，开放式","全天开放，商铺约 09:00-23:00","1-2小时","周末夜间人流非常大",1,"天心区太平街（五一大道以南，湘江中路以东）","地铁2号线“湘江中路”站或1号线“五一广场”站步行约8分钟；公交至“太平街口”站","战国以来即为城中心区域，清代为盐商聚集地，存贾谊故居、乾益升粮栈等","老长沙街巷格局与商贾文化","小吃街（臭豆腐、糖油粑粑）、文创店、夜市"],["street","都正街","天心区",28.182,112.977,"免费，开放式","全天开放，店铺约 10:00-22:00","0.5-1小时","比太平街安静，适合喝茶",1,"天心区都正街（近城南路）","地铁1号线“南门口”站步行约8分钟；公交至“书院路”一带；巷道窄，勿自驾","清代因都司衙门设于此得名，2016年完成有机更新","老城衙门文化与市井烟火","老墙、小酒馆、茶馆、社区小店"],["street","后湖国际艺术区","岳麓区",28.18,112.944,"免费，开放式","全天开放，画廊约 10:00-18:00","1-2小时","傍晚湖边散步最舒服",1,"岳麓区后湖路（大学城，湖南大学与中南大学之间）","地铁4号线“阜埠河”站步行约10分钟；公交至“后湖”站；周边有停车场","原为后湖渔场及旧厂房，2010年代改造为艺术园区","大学城艺术与创意产业聚集地","画廊、咖啡馆、湖面日落、驻场艺术家工作室"],["street","潮宗街历史文化街区","开福区",28.2,112.98,"免费，开放式","全天开放，店铺约 10:00-22:00","1-2小时","比太平街安静，适合citywalk",1,"开福区潮宗街（湘江中路东侧）","地铁1号线“培元桥”站或2号线“湘江中路”站步行约10分钟；街区内禁停","明清长沙城北门内的老街，因潮宗门得名，存时务学堂旧址、民国公馆群","维新运动时务学堂所在地，老城肌理样本","麻石老街、老公馆、文创与咖啡"],["street","五一广场","芙蓉区",28.196,112.982,"免费，开放式","全天开放，商铺约 10:00-22:00","0.5-1小时","白天逛街、晚上看夜景；节假日人极多",1,"芙蓉区五一大道与黄兴路交汇处（地铁1/2号线五一广场站）","地铁1号线、2号线“五一广场”站直达；多路公交至“五一广场”站；周边停车位紧张","明代为吉王府所在地，清代为巡抚衙门一带，历来是长沙城的地理中心，1990年代改建为市民广场","长沙“城市原点”，五一商圈核心，商业与地铁枢纽交汇","商圈、夜市、地铁换乘，人流最密集"],["street","黄兴路步行街","芙蓉区",28.193,112.979,"免费，开放式","全天开放，商铺约 10:00-22:00","1-2小时","与太平老街、坡子街连成一片，可顺路逛",1,"芙蓉区黄兴中路（南起司门口，北至中山亭）","地铁1号线“黄兴广场”站出站即到；公交至“司门口”“黄兴广场”站；建议地铁前往，堵车严重","道路建于1930年代，以辛亥革命元勋黄兴命名，2002年改建为商业步行街","纪念黄兴的近代城市道路，长沙最老的商业街之一","品牌店、小吃、街头表演"],["street","白果园历史文化街区","芙蓉区",28.192,112.985,"免费，开放式","全天开放，店铺约 10:00-22:00","1小时","巷子窄，适合慢慢逛拍照",1,"芙蓉区人民西路白果园巷（IFS国金中心西侧）","地铁1号线“黄兴广场”站步行约5分钟；公交至“人民西路”站；巷内禁停，建议停IFS地下车库","清代为织机户聚居地，民国时期建成公馆群，存程潜公馆等，2018年完成有机更新","老长沙“公馆文化”与市井生活的活样本","麻石小巷、民国公馆、咖啡馆与买手店"],["street","苏家巷","芙蓉区",28.193,112.983,"免费，开放式","全天开放，店铺约 10:00-22:00","0.5-1小时","巷内店铺多为午后营业",1,"芙蓉区苏家巷（黄兴广场东侧，近解放西路）","地铁1号线“黄兴广场”站步行约3分钟；不建议自驾，周边停车贵","明清老巷，因苏姓聚居得名，保留多处清末民初民居","老城街巷肌理与市井生活","文创小店、咖啡馆、街拍"],["street","丰盈西里","芙蓉区",28.195,112.986,"免费，开放式","全天开放，店铺约 11:00-22:00","0.5-1小时","傍晚灯光好，适合拍照",1,"芙蓉区丰盈西里（蔡锷南路东侧）","地铁1号线“黄兴广场”站或2号线“芙蓉广场”站步行约10分钟","民国时期形成的里弄住宅区，近年改造为文创街区","里弄住宅与城市更新","涂鸦墙、买手店、咖啡、小店"],["kids","长沙生态动物园","天心区",28.105,112.995,"需购票（约60元）","09:00-17:00（节假日至 17:30）","3-4小时","园区大，建议租电瓶车",0,"天心区芙蓉南路（暮云片区）","公交至“生态动物园”站；自驾走芙蓉南路有大型停车场；地铁暂不直达","2010年开园，由老动物园搬迁扩建而成","城市野生动物迁地保护与科普基地","车行猛兽区、大熊猫馆、长颈鹿"],["kids","华谊兄弟电影小镇","岳麓区",28.117,112.909,"需购票","09:30-21:00","3-4小时","夜场演艺需另购票",0,"岳麓区大王山旅游度假区（坪塘）","地铁3号线“山塘”站打车约10分钟；自驾走坪塘大道，景区有大型停车场","2018年开园，意式风情影视主题小镇","电影场景化文旅与影视拍摄","意大利风情街、实景演艺、夜游"],["kids","长沙世界之窗","开福区",28.238,113.038,"需购票（约130元起）","09:30-18:00（夜场至 21:30，以官网为准）","4-6小时","节假日有主题活动，官网可查",0,"开福区三一大道485号（浏阳河大桥东）","公交至“世界之窗”站；自驾走三一大道，景区有大型停车场；地铁不直达","1997年开园，为中南地区早期主题公园","世界建筑微缩与主题游乐","微缩世界建筑、过山车、夜场演出与烟花"],["kids","长沙海底世界","开福区",28.236,113.034,"需购票（约130元起）","09:00-17:30","2-3小时","表演场次固定，进馆先看时间表",0,"开福区三一大道（世界之窗旁）","公交至“世界之窗”“海底世界”站；自驾与世界之窗共用停车场","2002年开馆，湖南最早的海洋主题馆","海洋生物展示与科普","海底隧道、海豚海狮表演、极地动物"],["kids","浔龙河生态艺术小镇","长沙县",28.327,113.128,"免费入园，项目收费","09:00-17:30","3-4小时","节假日活动多，适合亲子",0,"长沙县果园镇","自驾走果园镇方向；有旅游公交；小镇有大型停车场","2010年代由企业投资建设的生态艺术小镇","乡村振兴与生态文旅样板","亲子农场、民宿、玻璃桥、研学基地"],["kids","零食王国","芙蓉区",28.194,112.9865,"免费进入，不设门票","10:00-22:30（节假日多延长至22:30后）","1-2小时","周末与节假日需排队入场，建议工作日上午去；结账高峰集中在出入口",1,"芙蓉区建湘路182号嘉悦汇商业广场负一层（芙蓉广场西南角）","地铁2号线“芙蓉广场”站1号口步行约260米，2号口与商场直连；公交至“芙蓉广场”站；地下停车场在建湘路393号","2026年4月17日开业，由鸣鸣很忙集团打造的沉浸式零食体验空间，开业即获吉尼斯“最大零食店”认证","长沙新消费与“零食经济”的代表，把零售卖场做成了文旅打卡点","1.2万平方米营业空间、6500余个品牌、3.5万款零食，全球零食与伴手礼可一站买齐"],["mall","IFS国金中心","芙蓉区",28.1963,112.9805,"免费进入（部分展览或活动另购票）","10:00-22:00（部分餐饮营业至更晚）","1.5-3小时","KAWS雕塑在7楼，需乘电梯上顶层；节假日拍照排队，建议工作日去",1,"芙蓉区解放西路188号","地铁1号线、2号线“五一广场”站4号口，1号线“黄兴广场”站1号口均可直达；公交至“五一广场”站；地下车库入口在蔡锷路、解放西路","2018年5月开业，香港九龙仓打造的双塔综合体，主塔高452米，为湖南第一高楼","长沙商业与潮流地标，五一商圈的核心载体，长沙“打卡经济”的代表","7楼雕塑花园的KAWS巨型雕塑、城市观景平台、高端品牌与城市首店集群"],["mall","万家丽国际购物广场","芙蓉区",28.193,113.021,"免费进入，文化大观园免费","09:30-22:30","2-3小时","楼层极多容易迷路，进楼先看导览图；顶楼日落时段最出片",1,"芙蓉区万家丽中路99号","地铁2号线“万家丽广场”站2号口步行约50米，负层与2号线、5号线换乘站直通；公交至“芙蓉区政府”站；楼内有6000个车位","2010年代中期建成开业，为体量极大的单体商业综合体，被本地人戏称“宇宙中心”","商业与文化展馆混合的超大综合体，购物之外兼有展览、观光功能","11楼免费文化大观园（历史长廊、蜡像）、顶楼直升机停机坪看日落"],["mall","悦方ID MALL","天心区",28.1923,112.9758,"免费进入","10:00-22:00","1-2小时","分南北两区且出口多，记好进来的入口位置",1,"天心区坡子街216号","地铁1号线“黄兴广场”站1号口步行约100米；公交至“坡子街”站；商场地下有停车场","2010年代初开业，前身为青和购物中心，后更名悦方ID MALL，共七层，地下一层为商业","五一商圈面向年轻人的购物中心，紧邻坡子街小吃街与太平老街","年轻潮流品牌、七层商业体、与坡子街小吃联动逛吃"],["mall","北辰荟","开福区",28.2465,112.986,"免费进入","10:00-22:00","1-2小时","与长沙市博物馆、滨江文化园相邻，可拼成半天行程",1,"开福区湘江大道1500号","地铁1号线“北辰三角洲”站2号口步行约5分钟；公交至“北辰三角洲”站；地下停车场24小时开放","2020年代初开业，为北辰三角洲片区的配套商业综合体","城北滨江商务区的生活型购物中心，服务周边社区与办公人群","城市首店比例较高、1号门鲨鱼嘴广场、亲子与餐饮业态集中"],["mall","长沙万象城","岳麓区",28.212,112.942,"免费进入","10:00-22:00","2-3小时","新场人气高，周末餐饮排队；地铁口直连不必过街",1,"岳麓区桐梓坡路11号（桐梓坡路与银盆南路交汇）","地铁4号线、6号线“六沟垅”站6号口步行约220米直达；紧邻湘雅路过江隧道，过江约5分钟；地下停车场","2024年12月18日开业，为全国第40座、长沙首座万象城，购物中心体量约17.4万平方米","华润置地打造的高端商业综合体，带动湘江新区“首发经济”","170余家城市首店、艺术空间与主题展、地铁站直连"],["mall","凯德·壹中心","岳麓区",28.23,112.933,"免费进入","10:00-22:00","1-2小时","与万象城同在滨江片区，可顺路连逛",1,"岳麓区茶子山东路112号（茶子山路与观沙岭路交汇）","地铁4号线“茶子山”站4号口步行约320米；公交至“茶子山”站；地下停车场","2010年代后期开业，凯德在长沙的首个购物中心，定位“智慧MALL”","滨江新城片区的商业配套，主打家庭与白领客群","智慧停车与导购系统、影院、亲子业态与餐饮集群"],["mall","宜家家居·长沙荟聚","岳麓区",28.124,112.933,"免费进入","10:00-21:00（周末及节假日多为10:00-22:00）","2-3小时","周末人多，宜家餐厅饭点排队久；逛完可去洋湖湿地散步",1,"岳麓区洋湖路253号（荟聚中心L2层，宜家家居旁）","地铁3号线“洋湖湿地”站3号口步行约10分钟；公交4路、206路、222路、389路、938路至洋湖湿地公园南门；自驾走坪塘大道转洋湖路","2019年开业，为荟聚购物中心＋宜家家居＋公寓的复合项目，总建筑面积约40万平方米","北欧家居生活方式与一站式家庭消费的代表","宜家样板间与瑞典餐厅、荟聚家庭业态、紧邻洋湖湿地公园"],["mall","步步高梅溪新天地","岳麓区",28.2055,112.899,"免费进入（梅溪欢乐谷等项目单独收费）","10:00-22:00","2-4小时","体量非常大、分区多，先定好吃饭或带娃的目标再逛",1,"岳麓区东方红路1099号（东方红路与枫林三路交汇）","地铁6号线“长庆”站4号口步行约150米；公交至“步步高梅溪湖新天地”站；大型停车场","2016年6月25日开业，总建筑面积约70万平方米，为步步高投资规模最大的城市综合体","梅溪湖国际新城核心商业，购物中心＋街区＋乐园的复合形态","700米梅溪跨境电商体验街、梅溪欢乐谷亲子乐园、影院与餐饮"],["mall","德思勤城市广场","雨花区",28.126,112.996,"免费进入","10:00-22:00（24小时书店全天开放）","1-2小时","地铁不近，建议公交或自驾；夜读可去24小时书店",0,"雨花区湘府中路18号（近红星商圈）","地铁1号线“省政府”站约2.4公里，需转公交或打车；公交至“高升村”“红星村南”站；地下停车场","2010年代中期开业，为长沙南城较早的大型城市综合体","南城红星商圈的商业与办公复合体，也是德思勤24小时书店所在地","24小时书店、影院、餐饮集群、夜间消费"]];
+
+const POIS=RAW.map((r,i)=>{
+  const name=r[1];
+  let open=7*60,close=21*60+30;
+  const hm=r[6].match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+  if(hm){open=(+hm[1])*60+(+hm[2]);close=(+hm[3])*60+(+hm[4]);}
+  const dm=r[7].match(/(\d+(\.\d+)?)(?:\s*[-~]\s*(\d+(\.\d+)?))?\s*小时/);
+  let dur=dm?(dm[3]?Math.min((+dm[1]+ +dm[3])/2,+dm[3]):+dm[1]):1.5;
+  if(/4-6|3-5/.test(r[7])) dur=Math.min(+dm[3],4.5);
+  const price=(r[5].match(/约?(\d+)\s*元/)||[])[1];
+  return {
+    id:i,t:r[0],name,district:r[2],lat:r[3],lng:r[4],
+    ticketText:r[5],price:price?+price:0,
+    open,close,dur,tips:r[8],metro:!!r[9],
+    addr:r[10]||'',transport:r[11]||'',history:r[12]||'',culture:r[13]||'',highlight:r[14]||'',
+    needReserve:/需预约|需提前预约|预约购票|登记入内/.test(r[5]),
+    closedMon:/周一闭馆/.test(r[6])||/周一闭馆/.test(r[5]),
+    lead:name==='湖南博物院'?7:(name==='橘子洲'||name==='岳麓山风景名胜区')?3:1,
+    outdoor:['nature','lake'].includes(r[0]),
+    climb:['岳麓山风景名胜区','黑麋峰国家森林公园','乌山森林公园','影珠山','天华山','象鼻窝森林公园','桃花岭景区','跳马涧','石燕湖生态旅游景区'].includes(name)
+  };
+});
+const byName=n=>POIS.find(p=>p.name===n||p.name.includes(n));
+
+/* ===================== 餐饮库（FoodAgent） ===================== */
+const FOODS=[
+ {name:'茶颜悦色（幽兰拿铁·多店可选）',lat:28.196,lng:112.978,spicy:0,queue:50,type:'网红',type2:'饮品',strategy:'开门后30分钟内或22:00后基本免排队；小程序提前下单，取餐后再逛',best:'10:00前 / 22:00后',noSpicyOk:true},
+ {name:'文和友（海信广场店）',lat:28.195,lng:112.977,spicy:2,queue:120,type:'网红',type2:'湘味市井',strategy:'取号后先去隔壁太平街，预估叫号时间再折返；工作日下午2-4点等位最短',best:'工作日 14:00-16:00',noSpicyOk:false},
+ {name:'火宫殿（坡子街总店）',lat:28.1952,lng:112.979,spicy:2,queue:30,type:'老字号',type2:'小吃拼盘',strategy:'游客店高峰拥挤，点小吃拼盘快速翻台；臭豆腐糖油粑粑一次集齐',best:'随到随吃，避12:00',noSpicyOk:true},
+ {name:'费大厨辣椒炒肉（国金中心店）',lat:28.1962,lng:112.983,spicy:2,queue:75,type:'网红',type2:'湘菜',strategy:'开门前10分钟取号，或14:30后错峰',best:'11:20前 / 14:30后',noSpicyOk:false},
+ {name:'笨萝卜浏阳菜馆（人民西路店）',lat:28.190,lng:112.984,spicy:2,queue:40,type:'本地人气',type2:'浏阳菜',strategy:'避开12:00高峰，11:15入座或13:30后',best:'11:15 / 13:30',noSpicyOk:false},
+ {name:'壹盏灯（药王街老店）',lat:28.1948,lng:112.9768,spicy:2,queue:45,type:'本地老店',type2:'湘菜家常',strategy:'本地人反复验证的老店，排队远短于网红店；辣度高需提前说明',best:'11:30前',noSpicyOk:false},
+ {name:'玉楼东（五一大道老字号）',lat:28.1940,lng:112.981,spicy:1,queue:20,type:'老字号',type2:'湘菜',strategy:'湘菜老字号排队少，可要求免辣/微辣，适合不吃辣人群',best:'随到随吃',noSpicyOk:true},
+ {name:'四方坪夜市',lat:28.212,lng:113.017,spicy:3,queue:30,type:'夜市',type2:'夜宵',strategy:'22:00后人流明显回落，摊位选择更多',best:'22:00后',noSpicyOk:false},
+ {name:'扬帆夜市',lat:28.222,lng:113.018,spicy:3,queue:20,type:'夜市',type2:'夜宵',strategy:'20:00后开摊，周末极挤，建议21:30后前往',best:'21:30后',noSpicyOk:false}
+];
+
+/* ===================== 避坑知识层 ===================== */
+const KNOWLEDGE=[
+ {cat:'预约刚性',t:'湖南博物院：提前7天蹲点',d:'免费但极难抢，放票即约；周一闭馆。抢不到可降级为长沙市博物馆（同看城史）或简牍博物馆（三国吴简）。'},
+ {cat:'预约刚性',t:'橘子洲/岳麓山提前3天',d:'节假日分时段限流，没预约进不去；橘子洲节假日桥上禁行，务必坐地铁2号线直达。'},
+ {cat:'闭馆规则',t:'大部分场馆周一闭馆',d:'省博、简牍、谢子龙、李自健、一师范等均周一闭馆，行程避开放周一。'},
+ {cat:'门票陷阱',t:'岳麓书院需单独购票',d:'岳麓山免预约进山，但书院单独收费约40元；爱晚亭、麓山寺含在山中免费。'},
+ {cat:'体力管理',t:'橘子洲坐小火车',d:'洲长近5公里，步行往返极耗体力，小火车20元值得买；岳麓山索道停运时改观光车，排队1小时要有心理准备。'},
+ {cat:'住宿策略',t:'不必死磕五一广场核心区',d:'沿地铁1/2号线选住宿性价比更高，既避开五一商圈节假日价格，出行反而更快。'},
+ {cat:'交通刚性',t:'五一广场节假日打车半小时挪不动',d:'起终点都在地铁站步行圈且逢高峰时，默认地铁优先；机场高铁站出口的黑车不要坐。'},
+ {cat:'排队策略',t:'茶颜悦色1小时起、文和友2小时+',d:'茶颜在开门30分钟内或晚10点后去；文和友取号后先逛太平街再折返。本地人建议：老店排队远短于网红店。'},
+ {cat:'天气风险',t:'大雨天橘子洲可能关闭',d:'夏季高温近40°C，户外主题日建议早出发、中午室内化；备一个文博/老街的雨天预案。'}
+];
+
+/* ===================== 工具函数 ===================== */
+const $=id=>document.getElementById(id);
+function distKm(a,b){const R=6371,d=Math.PI/180;const dLat=(b.lat-a.lat)*d,dLng=(b.lng-a.lng)*d;
+ const s=Math.sin(dLat/2)**2+Math.cos(a.lat*d)*Math.cos(b.lat*d)*Math.sin(dLng/2)**2;
+ return 2*R*Math.asin(Math.sqrt(s))*1.3;}
+const HOTELS=[[28.1960,112.9820],[28.1830,112.9430],[28.2020,112.9190],[28.2210,112.9880],[28.2460,113.0820]];
+function fmtT(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+/* ===================== MainAgent：意图解析 ===================== */
+const THEME_KW={
+ red:/红色|革命|研学|党建|伟人|毛泽东|一师范|第一师范|星火/,
+ museum:/博物|文博|馆藏|美术馆|艺术馆|看展|展览|马王堆/,
+ street:/夜市|夜游|美食|小吃|逛吃|烟火|老街|citywalk|Citywalk|步行街|湘菜|吃两天|吃一天/,
+ heritage:/书院|历史|人文|古城|古镇|文脉|老长沙/,
+ temple:/寺庙|禅|祈福|古刹|拜/,
+ nature:/爬山|徒步|登高|露营|骑行|橘子洲|洲岛|登山/,
+ lake:/公园|湿地|散步|慢节奏|休闲/,
+ kids:/亲子|孩子|娃|儿童|动物园|乐园|游乐/,
+ mall:/商圈|商场|购物|逛街|嗨购|潮玩|IFS|国金|万象城|宜家|零食|snacks/
+};
+const CROWD_KW=[[/爸妈|父母|老人|带长辈/,'elderly'],[/孩子|亲子|娃|儿童|小孩/,'family'],[/情侣|男朋友|女朋友|蜜月/,'couple'],[/特种兵|暴走|极限/,'beast'],[/朋友|闺蜜|兄弟|同学/,'friends']];
+function parseIntent(){
+  const txt=$('nl').value;
+  const themes=[];for(const k in THEME_KW)if(THEME_KW[k].test(txt))themes.push(k);
+  // 约束改为从对话文本自动识别（不再有勾选项）
+  const flags={
+    noSpicy:/不吃辣|不能吃辣|忌辣|清汤/.test(txt),
+    metroOnly:/必须地铁|只坐地铁|地铁出行/.test(txt),
+    noClimb:/不爬山|不登山|爬不动/.test(txt),
+    mustBo:/省博|湖南博物院/.test(txt),
+    night:/夜市|夜宵|夜游/.test(txt)
+  };
+  let crowd='friends';
+  for(const[re,c]of CROWD_KW)if(re.test(txt)){crowd=c;break;}
+  const CN={'一':1,'两':2,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7};
+  const dm=txt.match(/(\d+)\s*天/)||(txt.match(/([一两二三四五六七])\s*天/)?[null,CN[txt.match(/([一两二三四五六七])\s*天/)[1]]]:null);
+  if(dm&&dm[1])$('days').value=Math.min(5,Math.max(1,+dm[1]));
+  if($('crowd').value==='auto'){
+    const map={family:'family',elderly:'elderly',couple:'couple',beast:'beast',friends:'friends'};
+    $('crowd').value=map[crowd]||'friends';
+    for(const[re,c]of CROWD_KW)if(re.test(txt)){$('crowd').value=c;break;}
+  }
+  return {themes,flags};
+}
+
+/* ===================== AttractionAgent：候选检索 ===================== */
+function selectPOIs(themes,intent){
+  let pool;
+  if(themes.length){
+    pool=POIS.filter(p=>themes.includes(p.t));
+  }else{
+    pool=POIS.filter(p=>['heritage','street','nature'].includes(p.t));
+  }
+  if(intent.mustBo){
+    const mubo=byName('湖南博物院');
+    if(!pool.find(p=>p.id===mubo.id))pool.unshift(mubo);
+  }
+  pool=pool.filter((p,i,arr)=>arr.findIndex(x=>x.id===p.id)===i);
+  if(intent.noClimb)pool=pool.filter(p=>!p.climb);
+  if(intent.crowd==='elderly'||intent.crowd==='family')pool=pool.filter(p=>!p.climb||p.name==='岳麓山风景名胜区');
+  if(intent.days<=2&&intent.crowd!=='beast'){
+    const ctr={lat:HOTELS[0][0],lng:HOTELS[0][1]};
+    pool=pool.filter(p=>distKm(ctr,p)<20||p.id===muboId());
+  }
+  return pool;
+}
+function muboId(){return byName('湖南博物院').id;}
+
+/* ===================== ValidatorAgent：预约可行性 ===================== */
+const ALT={'湖南博物院':['长沙市博物馆','长沙简牍博物馆'],'橘子洲':['月亮岛','杜甫江阁'],'岳麓山风景名胜区':['桃花岭景区']};
+function validatePOI(p,date,today){
+  if(p.closedMon&&date.getDay()===1)return{st:'monday',msg:'周一闭馆冲突'};
+  if(p.needReserve){
+    const until=Math.ceil((date-today)/86400000);
+    if(until<p.lead)return{st:'red',msg:`需提前${p.lead}天预约，距今仅${Math.max(until,0)}天 → 窗口外`};
+    if(until===p.lead)return{st:'yellow',msg:`今天是预约窗口最后机会（提前${p.lead}天），立即锁定`};
+    return{st:'yellow',msg:`可预约（提前${p.lead}天放票，距今${until}天），建议立即锁定时段`};
+  }
+  if(p.price)return{st:'green',msg:'无需预约，现场/线上购票即可'};
+  return{st:'green',msg:'免费开放，无需预约'};
+}
+
+/* ===================== RouteAgent：主题日聚类 + 带时间窗排序 ===================== */
+function dayParams(intent){
+  return {
+    per:intent.crowd==='beast'?5:(intent.crowd==='elderly'||intent.crowd==='family')?3:4,
+    budget:intent.crowd==='beast'?10:(intent.crowd==='elderly'||intent.crowd==='family')?7:8.5
+  };
+}
+function buildDays(pool,intent,log,extras){
+  const days=[];
+  const {per,budget}=dayParams(intent);
+  const order=(intent.themes&&intent.themes.length)?intent.themes:[...new Set(pool.map(p=>p.t))];
+  const buckets=order.map(t=>({items:pool.filter(p=>p.t===t),main:true})).filter(b=>b.items.length);
+  const rest=pool.filter(p=>!order.includes(p.t));
+  if(rest.length)buckets.push({items:rest,main:true});
+  if(extras&&extras.length)buckets.push({items:extras.slice(),main:false});
+  buckets.forEach(b=>b.items.sort((a,bb)=>(bb.needReserve?bb.lead:0)-(a.needReserve?a.lead:0)));
+  const used=new Set();
+  while(days.length<intent.days){
+    let bi=-1,bestScore=-1;
+    buckets.forEach((b,i)=>{
+      const un=b.items.filter(p=>!used.has(p.id));
+      if(!un.length)return;
+      const s=(b.main?1e6:0)+Math.max(...un.map(p=>p.needReserve?p.lead:0))*100+un.length;
+      if(s>bestScore){bestScore=s;bi=i;}
+    });
+    if(bi<0)break;
+    const b=buckets[bi].items;
+    const anchor=b.find(p=>!used.has(p.id));
+    const items=[anchor];used.add(anchor.id);
+    let h=anchor.dur;
+    while(items.length<per){
+      let best=null,bs=1e9;
+      buckets.forEach((bk,i)=>{
+        const pen=i===bi?0:8;
+        for(const c of bk.items){
+          if(used.has(c.id))continue;
+          if(h+c.dur+1>budget)continue;
+          let dmin=1e9;
+          for(const it of items)dmin=Math.min(dmin,distKm(it,c));
+          const sc=dmin*2+pen+(c.needReserve?-2:0);
+          if(sc<bs){bs=sc;best=c;}
+        }
+      });
+      if(!best)break;
+      items.push(best);used.add(best.id);h+=best.dur+1;
+    }
+    days.push(items);
+  }
+  log(`主题日聚类完成：${days.length} 天，主题分桶=[${buckets.map(b=>b.items.length+'×'+THEMES[b.items[0].t].name).join('、')}]，跨区/跨主题代价惩罚已生效`);
+  return days;
+}
+
+function travelSeg(a,b,intent){
+  const d=distKm(a,b);
+  if(d<1.1)return{mode:'步行',mins:Math.round(10+d*6),note:'步行可达，顺路安排'};
+  if(intent.metroOnly){
+    if(a.metro&&b.metro)return{mode:'地铁',mins:Math.round(10+d*2.6),note:'地铁优先规则（对话中提到必须坐地铁）'};
+    return{mode:'地铁+打车接驳',mins:Math.round(16+d*2.6),note:'一端无地铁站，需短驳'};
+  }
+  if(intent.holiday&&a.metro&&b.metro&&d<9)return{mode:'地铁',mins:Math.round(10+d*2.6),note:'节假日高峰打车难（五一广场共识），地铁优先'};
+  return{mode:'打车',mins:Math.round(12+d*2.2+(intent.holiday?d*0.9:0)),note:intent.holiday?'已计入节假日拥堵惩罚':''};
+}
+
+function pickFood(pos,intent,excludeNames,evening,maxDist=3.5){
+  let cands=FOODS.filter(f=>!excludeNames.includes(f.name));
+  if(intent.noSpicy)cands=cands.filter(f=>f.spicy<=1||f.noSpicyOk);
+  if(evening&&intent.night){const ys=cands.filter(f=>f.type==='夜市');if(ys.length)cands=ys;}
+  cands.sort((a,b)=>distKm(pos,a)-distKm(pos,b));
+  const near=cands[0];
+  if(near&&distKm(pos,near)<maxDist)return near;
+  return null;
+}
+
+/* ===================== 日程编排 ===================== */
+function scheduleDay(items,intent,dayIdx){
+  const hotel={lat:HOTELS[+$('hotel').value][0],lng:HOTELS[+$('hotel').value][1],name:'住宿'};
+  let t=8*60+40;
+  let pos=hotel;
+  const evs=[];let lunch=false,dinner=false;
+  const eaten=[];
+  for(const p of items){
+    if(!lunch&&t>=11*60+20){
+      const f=pickFood(pos,intent,eaten,false);
+      if(f){
+        const s1=travelSeg(pos,f,intent);
+        const q=Math.round(f.queue*(intent.holiday?1.6:1));
+        evs.push({type:'meal',food:f,start:t+s1.mins,mins:60+Math.round(q*0.4),queue:q,seg:s1});
+        t=t+s1.mins+60+Math.round(q*0.4);pos=f;lunch=true;eaten.push(f.name);
+      }else{evs.push({type:'meal',food:{name:'就近简餐',strategy:'周边无匹配偏好好店，建议简餐或提前备餐'},start:t,mins:40,queue:0});t+=40;lunch=true;}
+    }
+    if(!dinner&&t>=17*60+40){
+      const f=pickFood(pos,intent,eaten,true,intent.night?12:3.5)||pickFood(pos,intent,eaten,false,intent.night?12:3.5);
+      if(f){
+        const s1=travelSeg(pos,f,intent);
+        const q=Math.round(f.queue*(intent.holiday?1.6:1));
+        evs.push({type:'meal',food:f,start:t+s1.mins,mins:75+Math.round(q*0.3),queue:q,seg:s1});
+        t=t+s1.mins+75+Math.round(q*0.3);pos=f;dinner=true;eaten.push(f.name);
+      }else{evs.push({type:'meal',food:{name:'就近晚餐',strategy:'周边无匹配偏好好店'},start:t,mins:50,queue:0});t+=50;dinner=true;}
+    }
+    const seg=travelSeg(pos,p,intent);
+    let arrive=t+seg.mins;
+    let start=Math.max(arrive,p.open);
+    let conflict=null;
+    if(arrive<p.open)conflict={k:'wait',msg:`提前到达，等待开园（${fmtT(p.open)} 开放）`};
+    let dur=p.dur*60;
+    if(start+dur>p.close){
+      const avail=p.close-start;
+      if(avail<40){conflict={k:'short',msg:'⚠ 到达后距闭馆不足40分钟，建议整体提前'};dur=Math.max(avail,30);}
+      else{conflict={k:'trim',msg:`临近闭馆，建议游玩压缩至 ${Math.round(avail/60*10)/10} 小时`};dur=avail;}
+    }
+    evs.push({type:'visit',poi:p,seg,start,mins:Math.round(dur),conflict});
+    t=start+dur;pos=p;
+  }
+  // 收尾餐：当天提前结束也要补上午/晚餐（夜市主题优先，早到则等到饭点）
+  if(!lunch&&t>=10*60){
+    const f=pickFood(pos,intent,eaten,false,5);
+    const q=f?Math.round(f.queue*(intent.holiday?1.6:1)):0;
+    const s1=f?travelSeg(pos,f,intent):null;
+    const ms=f?Math.max(t+s1.mins,11*60+30):Math.max(t,11*60+30);
+    evs.push(f?{type:'meal',food:f,start:ms,mins:60+Math.round(q*0.4),queue:q,seg:s1,wait:ms-(t+s1.mins)}
+              :{type:'meal',food:{name:'就近简餐',strategy:'周边无匹配偏好好店，建议简餐或提前备餐'},start:ms,mins:40,queue:0});
+    t=ms+(f?60+Math.round(q*0.4):40);if(f)pos=f;lunch=true;if(f)eaten.push(f.name);
+  }
+  if(!dinner){
+    const f=pickFood(pos,intent,eaten,true,intent.night?12:5)||pickFood(pos,intent,eaten,false,5);
+    const q=f?Math.round(f.queue*(intent.holiday?1.6:1)):0;
+    const s1=f?travelSeg(pos,f,intent):null;
+    const ms=f?Math.max(t+s1.mins,17*60+40):Math.max(t,17*60+40); // 早结束就等到饭点
+    evs.push(f?{type:'meal',food:f,start:ms,mins:75+Math.round(q*0.3),queue:q,seg:s1,wait:ms-(t+s1.mins)}
+              :{type:'meal',food:{name:'就近晚餐',strategy:'周边无匹配偏好好店，建议打车前往商圈用餐'},start:ms,mins:50,queue:0});
+    t=ms+(f?75+Math.round(q*0.3):50);if(f)pos=f;dinner=true;if(f)eaten.push(f.name);
+  }
+  return evs;
+}
+
+/* ===================== 会话与消息 ===================== */
+let CUR=null,PLAN=null,PLAN_HISTORY=[];
+function newSession(reset){
+  CUR={id:Date.now()+Math.random(),title:'新对话',msgs:[],ref:null,hasPlan:false,redCount:0};
+  renderHistory();renderChat();
+  pushMsg('agent','你好，我是<b>湘小游</b> 🍈<br>可以直接描述你的旅行想法，或在左侧「快捷指令」面板一键生成。<br>我会校验<b>预约窗口</b>、估算<b>排队成本</b>、按<b>主题日</b>分区排线。','sys');
+}
+function pushMsg(role,html,cls){
+  CUR.msgs.push({role,html,cls});
+  const box=$('msgs');
+  box.insertAdjacentHTML('beforeend',msgHtml(CUR.msgs[CUR.msgs.length-1]));
+  box.scrollTop=box.scrollHeight;
+}
+function msgHtml(m){
+  if(m.role==='user')return `<div class="msg user"><div class="bubble">${m.html}</div></div>`;
+  return `<div class="msg agent ${m.cls||''}"><div class="who">${m.who||'湘小游'}</div><div class="bubble">${m.html}</div></div>`;
+}
+function renderChat(){
+  $('msgs').innerHTML=CUR.msgs.map(msgHtml).join('');
+  $('msgs').scrollTop=$('msgs').scrollHeight;
+}
+/* ===== 规划记录：每生成一个规划新增一条，localStorage 持久化 ===== */
+function fmtTimeStr(d){return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function saveHist(){
+  try{localStorage.setItem('xsy_hist',JSON.stringify(PLAN_HISTORY));}catch(e){/* 存储超限则放弃持久化 */}
+}
+function loadHistLS(){
+  try{
+    const raw=localStorage.getItem('xsy_hist');
+    if(!raw)return;
+    PLAN_HISTORY=JSON.parse(raw);
+    PLAN_HISTORY.forEach(h=>h.plan.days.forEach(d=>d.date=new Date(d.date)));
+  }catch(e){PLAN_HISTORY=[];}
+}
+function addHist(replan,ttl){
+  const total=PLAN.plan.days.reduce((s,d)=>s+d.items.length,0);
+  PLAN_HISTORY.unshift({
+    title:replan?('⚡ 重规划 · '+(ttl||'')):(ttl||CUR.title||'行程规划').slice(0,20),
+    time:new Date().toISOString(),
+    days:PLAN.plan.days.length,total,
+    reds:PLAN.plan.resList.filter(r=>r.st==='red').length,
+    msgs:CUR.msgs.slice(),plan:PLAN.plan,intent:PLAN.intent,
+    replan:!!replan
+  });
+  if(PLAN_HISTORY.length>20)PLAN_HISTORY.length=20;
+  saveHist();
+}
+function renderHistory(){
+  $('histCount').textContent=PLAN_HISTORY.length+' 条';
+  $('histList').innerHTML=PLAN_HISTORY.length?PLAN_HISTORY.map((h,i)=>{
+    const st=h.reds?`<span class="st warn">⚠ ${h.reds} 预警</span>`:'<span class="st">✓ 全可约</span>';
+    return `<div class="hist" onclick="loadHistRec(${i})">
+      <div class="ht">${h.replan?'⚡ ':''}${esc(h.title)}</div>
+      <div class="hm"><span>🕐 ${fmtTimeStr(new Date(h.time))}</span><span>${h.days}天 · ${h.total}点</span>${st}</div></div>`;
+  }).join('')
+  :'<div style="font-size:11.5px;color:var(--sub);text-align:center;padding:24px 8px;line-height:2">还没有规划记录<br>每生成一个行程，<br>都会自动在这里留一条</div>';
+}
+function loadHistRec(i){
+  const h=PLAN_HISTORY[i];
+  CUR.msgs=h.msgs.slice();
+  PLAN={plan:h.plan,intent:h.intent,start:new Date(h.plan.days[0].date)};
+  CUR.hasPlan=true;CUR.ref=PLAN;CUR.redCount=h.reds;
+  renderChat();renderHistory();
+  renderPlan(h.plan,h.intent);
+  setReplanEnabled(true);
+  if(window.innerWidth<=1180)switchTab(document.querySelector('.tabs button[data-p="p_chat"]'));
+}
+function clearHist(){
+  if(!PLAN_HISTORY.length){alert('当前没有历史记录');return;}
+  if(!confirm(`确定清空全部 ${PLAN_HISTORY.length} 条历史记录吗？\n清空后不可恢复，当前对话与右侧行程展示不受影响。`))return;
+  PLAN_HISTORY=[];saveHist();
+  renderHistory();
+  if(CUR.hasPlan&&PLAN)renderPlan(PLAN.plan,PLAN.intent);
+}
+
+/* ===================== 渲染行程面板 ===================== */
+function badgeHtml(st){
+  const map={green:['b-green','免预约'],yellow:['b-yellow','需预约'],red:['b-red','窗口外'],monday:['b-gray','周一闭馆']};
+  const b=map[st]||map.green;return `<span class="badge ${b[0]}">${b[1]}</span>`;
+}
+function themeTag(t){const m=THEMES[t];return `<span class="themeTag" style="background:${m.color}26;color:${m.color};border:1px solid ${m.color}55">${m.name}</span>`;}
+
+function renderPlan(plan,intent){
+  const weeks=['周日','周一','周二','周三','周四','周五','周六'];
+  const totalPois=plan.days.reduce((s,d)=>s+d.items.length,0);
+  const reds=plan.resList.filter(r=>r.st==='red').length;
+  $('planTag').textContent=plan.days.length+' 天 · '+totalPois+' 个点位';
+  const summary=`<div class="summary">
+   <div class="sc">人群 <b>${intent.crowdLabel}</b></div>
+   <div class="sc">主题 <b>${plan.themes.map(t=>THEMES[t].name).join('/')||'综合推荐'}</b></div>
+   <div class="sc"><b>${plan.days.length}</b>天 · <b>${totalPois}</b>点 · <b>${plan.mealCount}</b>餐</div>
+   <div class="sc">预约 <b>${plan.resList.length}</b> 个${reds?` · <span style="color:var(--bad)">${reds} 预警</span>`:' · <span style="color:var(--ok)">全可约</span>'}</div>
+  </div>`;
+  const daycards=plan.days.filter(day=>day.items.length).map((day,di)=>{
+    const dom=THEMES[day.items[0].t].name;
+    const body=day.evs.map(e=>{
+      if(e.type==='travel2'){
+        return `<div class="ev"><div class="rail"><span class="tm">${fmtT(e.start)}</span><span class="dot" style="background:var(--line)"></span><span class="ln"></span></div>
+        <div class="body"><div class="evcard travel">🚕 <b>${e.seg.mode}</b> 约 ${e.seg.mins} 分钟${e.seg.note?` · ${esc(e.seg.note)}`:''}</div></div></div>`;
+      }
+      if(e.type==='meal'){
+        return `<div class="ev"><div class="rail"><span class="tm">${fmtT(e.start)}-${fmtT(e.start+e.mins)}</span><span class="dot" style="background:#FF82A2"></span><span class="ln"></span></div>
+        <div class="body"><div class="evcard"><div class="nm">🍜 ${esc(e.food.name)} <span class="badge b-food">${e.food.type||'餐饮'}</span>${e.queue?`<span class="badge b-warn">排队约${e.queue}分</span>`:''}</div>
+        <div class="meta">${e.food.best?`<span>⏰ ${e.food.best}</span>`:''}${e.wait>10?`<span>🧘 早到${e.wait}分可自由活动</span>`:''}</div>
+        <div class="note">💡 ${esc(e.food.strategy||'')}</div></div></div></div>`;
+      }
+      const p=e.poi;const v=plan.valid[p.id]||{st:'green',msg:''};
+      return `<div class="ev"><div class="rail"><span class="tm">${fmtT(e.start)}-${fmtT(e.start+e.mins)}</span><span class="dot" style="background:${THEMES[p.t].color}"></span><span class="ln"></span></div>
+      <div class="body"><div class="evcard" style="cursor:pointer" onclick="showPoi(${p.id})" title="点击查看景点详细介绍">
+        <div class="nm">${esc(p.name)} ${badgeHtml(v.st)} ${themeTag(p.t)}${p.price?`<span class="badge b-gray">门票${p.price}元</span>`:''}<span class="lnk" style="font-size:10.5px">详情</span></div>
+        <div class="meta"><span>📍 ${p.district}</span><span>🕘 ${fmtT(p.open)}-${fmtT(p.close)}</span><span>⏱ ${p.dur}h</span><span>${p.metro?'🚇 近地铁':'🚗 需打车'}</span></div>
+        ${v.msg?`<div class="note">🎫 ${esc(v.msg)}</div>`:''}
+        ${e.conflict?`<div class="note">${esc(e.conflict.msg)}</div>`:''}
+        <div class="note">💡 ${esc(p.tips)}</div>
+      </div></div></div>`;
+    }).join('');
+    const dateStr=`第${di+1}天 · ${weeks[day.date.getDay()]} ${day.date.getMonth()+1}/${day.date.getDate()}`;
+    const tc=THEMES[day.items[0].t].color;
+    return `<div class="daycard"><div class="dayhead" style="background:linear-gradient(120deg,${tc}1F,${tc}0D);border-left:3px solid ${tc}"><div class="dl">${dateStr} <span style="font-weight:400;font-size:11.5px;color:${tc}">｜${esc(dom)}</span></div>
+    <div class="dm">${day.items.length} 点 · 约${day.walk}步</div></div><div class="tl">${body}</div></div>`;
+  }).join('');
+  const res=`<div class="sect">📌 预约可行性面板</div>
+  <table class="resTable"><tr><th>点位</th><th>日期</th><th>状态 / 动作</th></tr>`+
+  (plan.resList.length?plan.resList.map(r=>{
+   const rp=byName(r.name);
+   return `<tr><td><b style="cursor:pointer;text-decoration:underline dotted var(--line2)" ${rp?`onclick="showPoi(${rp.id})"`:''}>${esc(r.name)}</b><br><span style="font-size:10px;color:var(--sub)">${r.lead?`提前${r.lead}天放票`:''}</span></td>
+   <td>${r.dateStr}</td>
+   <td>${badgeHtml(r.st)} ${r.action?`<div style="font-size:11px;color:var(--accent-dk);margin-top:3px">→ ${esc(r.action)}</div>`:`<div style="font-size:11px;color:var(--sub)">${esc(r.msg)}</div>`}</td></tr>`;}).join('')
+  :'<tr><td colspan="3" style="color:var(--sub);font-size:11.5px">本次行程无需预约节点</td></tr>')+'</table>';
+  const KCAT={'预约刚性':'var(--bad)','闭馆规则':'var(--mist)','门票陷阱':'var(--warn)','体力管理':'var(--sage)','住宿策略':'var(--lav)','交通刚性':'var(--info)','排队策略':'var(--clay)','天气风险':'var(--mist)'};
+  const kn=`<div class="sect">🛡 本地避坑知识层</div>`+KNOWLEDGE.map(k=>`<div class="kcard" style="border-left-color:${KCAT[k.cat]||'var(--gold)'}"><span class="cat">${k.cat}</span><b>${k.t}</b>${k.d}</div>`).join('');
+  $('planBody').innerHTML=summary+daycards+res+kn;
+}
+
+/* ===================== 多轮问答（不重新生成行程） ===================== */
+async function answerQuestion(txt){
+  const log=(cls,html)=>pushMsg('agent',html,cls);
+  await sleep(280);
+  // ① 指名景点 → 景点介绍
+  const poi=POIS.filter(p=>txt.includes(p.name)||(p.name.length>4&&txt.includes(p.name.slice(0,4)))).sort((a,b)=>b.name.length-a.name.length)[0];
+  if(poi){
+    const dayIdx=PLAN.plan.days.findIndex(d=>d.items.some(x=>x.id===poi.id));
+    log('agent',`<b>${esc(poi.name)}</b> ${themeTag(poi.t)}（${poi.district}）<br>
+      🎫 ${esc(poi.ticketText)}${poi.needReserve?` · 需<b>提前 ${poi.lead} 天</b>预约`:''}${poi.closedMon?' · 周一闭馆':''} · ${poi.metro?'近地铁':'建议打车/自驾'}<br>
+      🕘 开放 ${fmtT(poi.open)}-${fmtT(poi.close)} · 建议游玩约 ${poi.dur} 小时<br>
+      ${poi.highlight?`✨ ${esc(poi.highlight)}<br>`:''}💡 ${esc(poi.tips)}<br>
+      ${dayIdx>=0?`✅ 已安排在第 ${dayIdx+1} 天行程中。`:'当前行程未包含该点位，想加入请直接说。'}
+      <span class="lnk" onclick="showPoi(${poi.id})">点此查看完整介绍 →</span>`);
+    return;
+  }
+  // ② 餐饮 / 排队
+  if(/吃|餐|排队|茶颜|文和友|湘菜|夜市|臭豆腐/.test(txt)){
+    const f=FOODS.filter(x=>txt.includes(x.name.slice(0,3)))[0]||FOODS.slice().sort((a,b)=>b.queue-a.queue)[0];
+    log('agent',`<b>${esc(f.name)}</b>（${f.type} · ${f.type2}）<br>
+      ⏱ 平均排队约 <b>${f.queue} 分钟</b>${PLAN.intent.holiday?'（节假日高峰 ×1.6）':''} · 辣度${f.spicy<=1?'低/可免辣':'高'}<br>
+      ⏰ 最佳时段：${f.best}<br>
+      💡 ${esc(f.strategy)}<br>
+      <span style="font-size:11.5px;color:var(--sub)">本地共识：老字号排队远短于网红店，可让 FoodAgent 直接换成老店。</span>`);
+    return;
+  }
+  // ③ 预约 / 门票 / 闭馆
+  if(/预约|门票|闭馆|放票/.test(txt)){
+    const rl=PLAN.plan.resList;
+    log('agent',`当前行程共 <b>${rl.length}</b> 个需预约/购票节点：<br>`+
+      rl.map(r=>`· <b>${esc(r.name)}</b> ${badgeHtml(r.st)} ${r.lead?`提前${r.lead}天放票 · `:''}${esc(r.msg)}`).join('<br>')+
+      `<br><span style="font-size:11.5px;color:var(--sub)">预约规则：湖南博物院提前7天 · 橘子洲/岳麓山提前3天 · 其余提前1天；大部分场馆周一闭馆。</span>`);
+    return;
+  }
+  // ④ 默认引导
+  const plan=PLAN.plan;
+  log('agent',`当前行程：<b>${plan.days.length} 天 · ${plan.days.reduce((s,d)=>s+d.items.length,0)} 个点位 · ${plan.mealCount} 餐</b>。可以直接继续对话：<br>
+    · "第二天换成文博主题" / "改成3天"<br>
+    · "湖南博物院怎么预约" / "茶颜悦色要排多久"<br>
+    · 点击右侧行程里的<b>任意景点卡片</b>可查看详细介绍。`);
+}
+
+/* ===================== 景点详情弹窗 ===================== */
+function showPoi(id){
+  const p=POIS.find(x=>x.id===id);if(!p)return;
+  const dayIdx=PLAN&&PLAN.plan?PLAN.plan.days.findIndex(d=>d.items.some(x=>x.id===p.id)):-1;
+  const kn=KNOWLEDGE.filter(k=>k.d.includes(p.name)||(k.t.split(/[：:]/)[0]&&p.name.includes(k.t.split(/[：:]/)[0])));
+  const near=POIS.filter(q=>q.t===p.t&&q.id!==p.id&&!PLAN?.plan?.days.some(d=>d.items.some(x=>x.id===q.id))).sort((a,b)=>distKm(p,a)-distKm(p,b)).slice(0,4);
+  const themeLink=[...POIS].sort((a,b)=>distKm(p,a)-distKm(p,b)).filter(q=>q.id!==p.id&&q.t===p.t).slice(0,4);
+  $('poiCard').innerHTML=`
+    <button class="x" onclick="closePoi()">✕</button>
+    <h3>${esc(p.name)} ${themeTag(p.t)}</h3>
+    <div style="font-size:11.5px;color:var(--sub);margin-bottom:10px">${p.district} · ${THEMES[p.t].name}主题${dayIdx>=0?` · <span style="color:var(--accent-dk)">已安排在第 ${dayIdx+1} 天</span>`:''}</div>
+    ${p.addr?`<div class="poiRow"><span class="k">📍 地址</span><span class="v">${esc(p.addr)}</span></div>`:''}
+    <div class="poiRow"><span class="k">🎫 门票预约</span><span class="v">${esc(p.ticketText)}${p.price?`（约 ${p.price} 元）`:''}${p.needReserve?`<br><b style="color:var(--accent-dk)">需提前 ${p.lead} 天预约</b>${p.name==='湖南博物院'?'，放票即约、极难抢':''}`:'（无需预约）'}</span></div>
+    <div class="poiRow"><span class="k">🕘 开放时间</span><span class="v">${esc(RAW[p.id][6])}${p.closedMon?'<br><b style="color:var(--bad)">周一闭馆</b>，行程已自动避开':''}</span></div>
+    <div class="poiRow"><span class="k">⏱ 建议游玩</span><span class="v">约 ${RAW[p.id][7]}${p.outdoor?' · 户外点位，雨天会触发自动重规划':''}</span></div>
+    <div class="poiRow"><span class="k">🚇 交通</span><span class="v">${p.transport?esc(p.transport):p.metro?'近地铁站，地铁优先':'周边无地铁站，建议打车'}${themeLink.length?`<br>距最近同类点位 ${distKm(p,themeLink[0]).toFixed(1)}km`:''}</span></div>
+    ${p.history?`<div class="poiRow"><span class="k">📜 历史沿革</span><span class="v">${esc(p.history)}</span></div>`:''}
+    ${p.culture?`<div class="poiRow"><span class="k">🏮 文化背景</span><span class="v">${esc(p.culture)}</span></div>`:''}
+    ${p.highlight?`<div class="poiRow"><span class="k">✨ 特色亮点</span><span class="v">${esc(p.highlight)}</span></div>`:''}
+    <div class="poiRow"><span class="k">💡 游玩贴士</span><span class="v">${esc(p.tips)}</span></div>
+    ${kn.length?`<div class="poiRow"><span class="k">🛡 避坑提示</span><span class="v">${kn.map(k=>`<b>${k.t}</b>：${k.d}`).join('<br>')}</span></div>`:''}
+    ${near.length?`<div class="poiRow" style="border-bottom:none"><span class="k">🔗 同主题联动</span><span class="v">距离近、可顺路安排：<div class="poiNear">${near.map(q=>`<span class="nchip" onclick="showPoi(${q.id})">${esc(q.name)} · ${distKm(p,q).toFixed(1)}km</span>`).join('')}</div></span></div>`:''}
+    <div style="font-size:11px;color:var(--sub);margin-top:10px">想把它加进行程或替换某天点位？直接在左侧对话框说，例如"第${(dayIdx>=0?Math.min(dayIdx+2,PLAN.plan.days.length):1)}天换成${esc(p.name)}"。</div>`;
+  $('poiModal').classList.add('show');
+}
+function closePoi(){$('poiModal').classList.remove('show');}
+
+/* ===================== 生成主流程 ===================== */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function setReplanEnabled(on){['r_rain','r_queue','r_closed','r_late'].forEach(id=>$(id).disabled=!on);}
+
+function buildPlanAndValidate(themes,intent,start,today,log){
+  const pool=selectPOIs(themes,intent);
+  const poolIds=new Set(pool.map(p=>p.id));
+  const extras=selectPOIs(Object.keys(THEMES),intent).filter(p=>!poolIds.has(p.id));
+  log('agent',`<b>AttractionAgent</b> 命中候选点位 ${pool.length} 个${intent.noClimb?'（已剔除爬山点位）':''}${intent.days<=2?'（短行程剔除20km外远郊）':''}`);
+  log('agent',`<b>FoodAgent</b> 餐饮库 ${FOODS.length} 家：${intent.noSpicy?'已按「不吃辣」过滤，仅保留可免辣选项':'老店优先于网红店'}`);
+  const days=buildDays(pool,intent,(m)=>log('agent',`<b>RouteAgent</b> ${m}`),extras);
+  const valid={};const swapLog=[];const mondayAction={};
+  days.forEach((items,di)=>{
+    const date=new Date(start.getTime()+di*86400000);
+    items.forEach(p=>{
+      if(validatePOI(p,date,today).st==='monday'){
+        const {budget}=dayParams(intent);
+        const altDayIdx=days.findIndex((_,dj)=>{
+          if(dj===di)return false;
+          if(new Date(start.getTime()+dj*86400000).getDay()===1)return false;
+          const h=days[dj].reduce((s,x)=>s+x.dur+1,0);
+          return h+p.dur+1<=budget&&days[dj].length<dayParams(intent).per;
+        });
+        if(altDayIdx>=0){
+          days[altDayIdx].push(p);
+          days[di]=days[di].filter(x=>x.id!==p.id);
+          swapLog.push(`${p.name} 因周一闭馆，从第${di+1}天调整至第${altDayIdx+1}天`);
+          mondayAction[p.id]=`已自动调整到第${altDayIdx+1}天（避开周一闭馆）`;
+        }else{
+          const alt=(ALT[p.name]||[]).map(byName).find(a=>a&&!a.closedMon);
+          if(alt){swapLog.push(`${p.name} 周一闭馆且无其他日期 → 已替换为 ${alt.name}`);days[di][items.indexOf(p)]=alt;}
+        }
+      }
+    });
+  });
+  days.forEach((items,di)=>{
+    const date=new Date(start.getTime()+di*86400000);
+    items.forEach((p,ii)=>{
+      const v=validatePOI(p,date,today);
+      if(v.st==='red'){
+        if(intent.mustBo&&p.id===muboId()){
+          valid[p.id]=v;valid[p.id].action='已保留：建议放票日蹲点+开候补，已备同主题替代方案（长沙市博物馆）';
+        }else{
+          const isUsed=a=>!a||days.some(d=>d.includes(a));
+          let alts=(ALT[p.name]||[]).map(byName).filter(a=>a&&a.t===p.t&&!isUsed(a));
+          const nearPool=POIS.filter(q=>q.t===p.t&&!q.needReserve&&!isUsed(q)).sort((a,b)=>distKm(p,a)-distKm(p,b));
+          alts=alts.concat(nearPool);
+          const alt=alts.find(a=>distKm(p,a)<18&&!(a.closedMon&&date.getDay()===1));
+          if(alt){swapLog.push(`${p.name} 预约窗口外 → 自动替换为同主题 ${alt.name}`);items[ii]=alt;}
+          else{valid[p.id]=v;v.action='预约窗口外且无就近同主题替代：建议改期出行，或放票日蹲点候补';}
+        }
+      }
+    });
+  });
+  const resList=[];
+  days.forEach((items,di)=>{
+    const date=new Date(start.getTime()+di*86400000);
+    items.forEach(p=>{
+      const prev=valid[p.id];
+      const v=validatePOI(p,date,today);
+      if(prev&&prev.action&&!mondayAction[p.id])v.action=prev.action;
+      if(mondayAction[p.id])v.action=mondayAction[p.id];
+      if(v.st==='monday'&&!v.action)v.action='无可调日期与可替换点位：建议改期出行，或当日现场咨询分时段余票';
+      valid[p.id]=v;
+      if(p.needReserve){
+        if(v.st==='red'&&intent.mustBo&&p.id===muboId())v.action='已保留：建议放票日蹲点+开候补，已备同主题替代方案（长沙市博物馆）';
+        resList.push({name:p.name,st:v.st,msg:v.msg,action:v.action,lead:p.lead,dateStr:`第${di+1}天`});
+      }
+    });
+  });
+  swapLog.forEach(s=>log('agent warn',`<b>ValidatorAgent</b> ${esc(s)}`));
+  log('agent ok',`<b>ValidatorAgent</b> 校验完成：预约节点 ${resList.length} 个，${resList.filter(r=>r.st==='red').length} 个窗口外、${resList.filter(r=>r.st==='yellow').length} 个需尽快锁定`);
+  return {days,valid,resList};
+}
+
+function attachSchedule(plan,intent){
+  plan.days.forEach((day,di)=>{
+    const evs=scheduleDay(day.items,intent,di);
+    const evsShow=[];let prevPos=null;
+    evs.forEach(e=>{
+      if(e.type==='visit'){
+        if(prevPos){const seg=travelSeg(prevPos,e.poi,intent);evsShow.push({type:'travel2',seg,start:e.start-seg.mins});}
+        evsShow.push(e);prevPos=e.poi;
+      }else{evsShow.push(e);if(e.food&&e.food.lat)prevPos=e.food;}
+    });
+    day.evs=evsShow;
+    day.walk=Math.round(day.items.reduce((s,p)=>s+p.dur,0)*1600);
+  });
+  plan.mealCount=plan.days.reduce((s,d)=>s+d.evs.filter(e=>e.type==='meal').length,0);
+}
+
+async function generate(title){
+  $('sendBtn').disabled=true;$('genBtn').disabled=true;$('genBtn').textContent='⏳ 正在为您规划...';
+  try{
+    const txt=(title||'').trim();
+    const hasReq=/(\d+)\s*天|[一两二三四五六七]\s*天|改成|换成|改为|重新|主题/.test(txt);
+    // 多轮对话：有行程且当前只是提问/追问 → 进入问答，不重新生成
+    if(CUR.hasPlan&&PLAN&&!hasReq&&/介绍|为什么|怎么|怎么样|哪里|多少|推荐|好玩|值得|有必要|预约|门票|排队|闭馆|吃|茶颜|文和友|？|\?/.test(txt)){
+      await answerQuestion(txt);return;
+    }
+    const pi=parseIntent();
+    let themes=pi.themes;
+    const flags=pi.flags;
+    // ① 快捷指令面板点选的主题（可多选）优先合入
+    const picked=[...SEL_THEMES];
+    if(picked.length)themes=[...new Set([...picked,...themes])];
+    // ② 多轮延续：本轮未提主题且面板未选 → 沿用上一轮行程主题
+    else if(!themes.length&&CUR.hasPlan&&PLAN)themes=PLAN.intent.themes.slice();
+    const intent={
+      days:Math.min(5,Math.max(1,+$('days').value||2)),
+      crowd:$('crowd').value==='auto'?'friends':$('crowd').value,
+      holiday:$('daytype').value==='holiday',
+      noSpicy:flags.noSpicy,
+      metroOnly:flags.metroOnly,
+      noClimb:flags.noClimb,
+      mustBo:flags.mustBo,
+      night:flags.night
+    };
+    intent.themes=themes;
+    intent.crowdLabel={family:'家庭亲子',elderly:'带爸妈/老人',couple:'情侣',friends:'朋友结伴',beast:'特种兵'}[intent.crowd];
+    const today=new Date();today.setHours(0,0,0,0);
+    const start=$('startDate').value?new Date($('startDate').value+'T00:00:00'):new Date(today.getTime()+86400000);
+    if(CUR.msgs.length<=2)CUR.title=(title||'行程规划').slice(0,16);
+    const wasPlan=CUR.hasPlan;
+    CUR.hasPlan=false;
+
+    const log=(cls,html)=>pushMsg('agent',html,cls);
+    if(wasPlan)log('sys','— 收到新需求，基于当前对话上下文重新规划 —');
+    log('sys',`<b>MainAgent</b> 解析意图：主题=${themes.map(t=>THEMES[t].name).join('/')||'未指定→综合'} · 人群=${intent.crowdLabel} · ${intent.days} 天 · 偏好=[${[intent.noSpicy&&'不吃辣',intent.metroOnly&&'地铁出行',intent.noClimb&&'不爬山',intent.mustBo&&'省博必去',intent.night&&'要夜市'].filter(Boolean).join('、')||'无'}]（自对话识别） · ${intent.holiday?'周末/节假日':'工作日'}`);
+    await sleep(420);
+    log('agent',`<b>TransportAgent</b> 交通模型：地铁≈2.6min/km，打车≈2.2min/km${intent.holiday?'，节假日拥堵惩罚 +0.9min/km（高峰地铁优先）':''}`);
+    await sleep(380);
+    const {days,valid,resList}=buildPlanAndValidate(themes,intent,start,today,log);
+    await sleep(320);
+
+    const plan={days:[],valid,resList,themes:themes.length?themes:['heritage','street','nature']};
+    days.forEach((items,di)=>{
+      const date=new Date(start.getTime()+di*86400000);
+      plan.days.push({date,items});
+    });
+    attachSchedule(plan,intent);
+    PLAN={plan,intent,start};
+    CUR.ref=PLAN;CUR.hasPlan=true;CUR.redCount=resList.filter(r=>r.st==='red').length;
+    renderPlan(plan,intent);addHist(false,title);renderHistory();setReplanEnabled(true);
+    const total=plan.days.reduce((s,d)=>s+d.items.length,0);
+    log('agent ok',`✅ 行程已生成：<b>${plan.days.length} 天 · ${total} 个点位 · ${plan.mealCount} 次餐饮（含错峰策略）</b>，已在右侧「行程规划」面板展示。可以随时追问，或用左上角重规划按钮应对突发状况。`);
+    if(window.innerWidth<=1180)switchTab(document.querySelector('.tabs button[data-p="p_plan"]'));
+  }finally{
+    $('sendBtn').disabled=false;$('genBtn').disabled=false;$('genBtn').textContent='🧭 按以上设置生成行程';
+    if(window.innerWidth>1180)$('nl').value='';
+    renderHistory();
+  }
+}
+
+/* ===================== 发送入口 ===================== */
+function sendFromChat(){
+  const t=$('nl').value.trim();
+  if(!t)return;
+  pushMsg('user',esc(t));
+  generate(t);
+}
+function sendFromPanel(){
+  const t=$('nl').value.trim()||'生成出行方案';
+  pushMsg('user',esc(t));
+  generate(t);
+}
+function sendChip(el,txt,reset){
+  if(reset){$('crowd').value='auto';[...SEL_THEMES].forEach(t=>toggleTheme(t));}
+  $('nl').value=txt;
+  pushMsg('user',esc(txt));
+  if(window.innerWidth<=1180)switchTab(document.querySelector('.tabs button[data-p="p_chat"]'));
+  generate(txt);
+}
+
+/* ===================== 动态重规划 ===================== */
+function doReplan(kind){
+  if(!PLAN)return;
+  const names={rain:'突降大雨',queue:'排队超预期',closed:'橘子洲临时闭园',late:'中午延误2小时'};
+  pushMsg('user',`⚠ ${names[kind]}，帮我重新安排`);
+  const {plan,intent}=PLAN;
+  const out=[];
+  const today=new Date();today.setHours(0,0,0,0);
+  for(let di=1;di<plan.days.length;di++){
+    const day=plan.days[di];
+    const date=new Date(PLAN.start.getTime()+di*86400000);
+    for(let ii=0;ii<day.items.length;ii++){
+      const p=day.items[ii];
+      let rep=null,why='';
+      if(kind==='rain'&&p.outdoor){
+        const cands=POIS.filter(q=>!q.outdoor&&q.t!=='kids'&&!plan.days.some(d=>d.items.includes(q))).sort((a,b)=>distKm(p,a)-distKm(p,b));
+        rep=cands[0];why='雨天户外点位 → 就近室内替换';
+      }
+      if(kind==='closed'&&p.name==='橘子洲'){
+        const cands=(ALT['橘子洲']||[]).map(byName).filter(a=>a&&!plan.days.some(d=>d.items.includes(a)));
+        rep=cands[0];why='临时闭园 → 同主题（洲岛/滨江）替换';
+      }
+      if(rep){
+        out.push({del:p.name,add:rep.name,why,di});
+        day.items[ii]=rep;
+        plan.valid[rep.id]=validatePOI(rep,date,today);
+        if(rep.needReserve)plan.resList.push({name:rep.name,st:plan.valid[rep.id].st,msg:plan.valid[rep.id].msg,action:'重规划新增节点，请立即预约',lead:rep.lead,dateStr:`第${di+1}天`});
+      }
+    }
+  }
+  if(kind==='queue'){
+    plan.days.forEach((d,di)=>{if(di===0)return;
+      d.evs.forEach(e=>{
+        if(e.type==='meal'&&/茶颜|文和友/.test(e.food.name)){
+          const alt=FOODS.find(f=>f.name==='玉楼东（五一大道老字号）');
+          out.push({del:e.food.name+'（排队'+e.queue+'分钟）',add:alt.name,why:'排队超预期 → 切换老店避坑策略',di});
+          e.food=alt;e.queue=Math.round(alt.queue*(intent.holiday?1.6:1));
+        }
+      });
+    });
+  }
+  if(kind==='late'){
+    const day=plan.days[1];
+    if(day){
+      const dropIdx=day.items.map((p,i)=>({p,i})).reverse().find(x=>!x.p.needReserve);
+      if(dropIdx){
+        out.push({del:dropIdx.p.name,add:'（删除，顺延时间窗）',why:'延误2小时 → 压缩当日容量，保住有预约节点',di:1});
+        day.items.splice(dropIdx.i,1);
+      }
+    }
+  }
+  attachSchedule(plan,intent);
+  renderPlan(plan,intent);
+  const diffHtml=`<b>ReAct 重规划</b>（${names[kind]}）——已保留第1天及全部既有预约，仅修补后续：<br>`+
+   (out.length?out.map(o=>`第${o.di+1}天：<span style="color:var(--bad);text-decoration:line-through">${esc(o.del)}</span> → <span style="color:var(--ok)">${esc(o.add)}</span><br><span style="font-size:11px;color:var(--sub)">${esc(o.why)}</span>`).join('<br>')
+   :'本次场景不涉及第2天起的已排点位，行程无需调整。');
+  pushMsg('agent',diffHtml,'ok');
+  CUR.redCount=plan.resList.filter(r=>r.st==='red').length;
+  addHist(true,names[kind]);renderHistory();
+}
+
+/* ===================== 移动端 Tab ===================== */
+function switchTab(btn){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['p_cmd','p_hist','p_chat','p_plan'].forEach(id=>$(id).classList.toggle('mobActive',id===btn.dataset.p));
+}
+
+/* ===================== 初始化 ===================== */
+const CHIP_EXAMPLES=['带爸妈感受长沙的红色文化，两天，不吃辣，必须去省博','和朋友周末来吃两天，夜市安排上','亲子3天，不爬山，孩子想看动物','文博艺术深度4天，工作日出行','特种兵周末暴走，橘子洲岳麓山都要','情侣两天，citywalk加拍照'];
+$('chips').innerHTML=CHIP_EXAMPLES.map(c=>`<span class="chip" onclick="sendChip(this,'${c.replace(/'/g,"\\'")}',true)">${c}</span>`).join('');
+/* 主题选择 chips（可多选，生成时生效） */
+const SEL_THEMES=new Set();
+$('themeChips').innerHTML=Object.keys(THEMES).map(t=>{const c=THEMES[t].color;return `<span class="tchip" id="tchip_${t}" onclick="toggleTheme('${t}')" style="color:${c};border-color:${c}77;background:${c}12">${THEMES[t].name}</span>`;}).join('');
+function toggleTheme(t){
+  const el=$('tchip_'+t);const c=THEMES[t].color;
+  if(SEL_THEMES.has(t)){SEL_THEMES.delete(t);el.classList.remove('sel');el.style.cssText=`color:${c};border-color:${c}77;background:${c}12`;}
+  else{SEL_THEMES.add(t);el.classList.add('sel');el.style.cssText=`background:${c};border-color:${c};color:#fff;box-shadow:0 2px 8px ${c}55`;}
+}
+$('nl').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendFromChat();}});
+(function initDate(){const d=new Date();d.setDate(d.getDate()+1);const pad=n=>String(n).padStart(2,'0');$('startDate').value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());})();
+$('startDate').addEventListener('change',e=>{const d=new Date(e.target.value+'T00:00:00');$('daytype').value=(d.getDay()===0||d.getDay()===6)?'holiday':'work';});
+loadHistLS();
+newSession(true);
+</script>
+</body>
+</html>
